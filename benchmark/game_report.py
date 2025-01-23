@@ -1,5 +1,5 @@
 from typing import Dict
-from game import Game, Round
+from src.game import Game, Round
 
 
 def generate_html_report(game: Game) -> str:

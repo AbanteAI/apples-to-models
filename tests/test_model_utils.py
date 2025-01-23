@@ -1,4 +1,4 @@
-from model_utils import Messages, call_model
+from src.model_utils import Messages, call_model
 
 
 def main():
