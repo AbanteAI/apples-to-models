@@ -1,5 +1,5 @@
 import pytest
-from src.game import Game
+from benchmark.game import Game
 import tempfile
 from pathlib import Path
 
