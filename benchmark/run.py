@@ -2,8 +2,19 @@ import argparse
 import random
 from pathlib import Path
 from typing import List, Optional
+from datetime import datetime
 
 from benchmark.game import Game
+
+# Create games directory if it doesn't exist
+GAMES_DIR = Path(__file__).parent / "games"
+GAMES_DIR.mkdir(exist_ok=True)
+
+
+def get_default_save_path() -> Path:
+    """Generate a default save path with timestamp"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return GAMES_DIR / f"game_{timestamp}.json"
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -102,9 +113,10 @@ def run_game(
             "Random selection",
         )
 
-    # Save game if requested
-    if save_game_path:
-        game.save_game(save_game_path)
+    # Save game (use default path if none specified)
+    save_path = save_game_path if save_game_path else str(get_default_save_path())
+    game.save_game(save_path)
+    print(f"\nGame saved to: {save_path}")
 
     return game
 
