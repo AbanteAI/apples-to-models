@@ -23,10 +23,16 @@ jobs:
         
     - name: Install dependencies
       run: |
+        uv venv
+        . .venv/bin/activate
         uv pip install -r requirements.txt
         
     - name: Run ruff
-      run: ruff check .
+      run: |
+        . .venv/bin/activate
+        ruff check .
       
     - name: Run pyright
-      run: pyright
+      run: |
+        . .venv/bin/activate
+        pyright
