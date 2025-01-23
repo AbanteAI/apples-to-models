@@ -98,7 +98,7 @@ def test_error_handling():
         game.play_card(player_idx, game.players[player_idx].hand[0], "second play")
 
     # Test judging before all players have played
-    new_round = game.start_round()
+    game.start_round()
     with pytest.raises(ValueError, match="Not all players have played their cards yet"):
         game.judge_round(game.players[0].hand[0], "too early")
 
