@@ -46,21 +46,10 @@ def call_model(model: str, messages: Messages) -> str:
         base_url="https://openrouter.ai/api/v1"
     )
 
-    # Handle special cases for model quantization
-    extra_body = {}
-    if model == "meta-llama/llama-3.1-405b-instruct:bf16":
-        model = "meta-llama/llama-3.1-405b-instruct"
-        extra_body = {
-            "provider": {
-                "quantizations": ["bf16"]
-            }
-        }
-
     response = client.chat.completions.create(
         model=model,
         messages=list(messages),  # Convert Messages instance to list
-        temperature=0.7,
-        extra_body=extra_body
+        temperature=0.7
     )
     
     content = response.choices[0].message.content
