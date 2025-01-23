@@ -1,26 +1,30 @@
-from typing import List, Dict
+from typing import List, Iterator
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam
 from dotenv import load_dotenv
 import os
 from retry import retry
 
 class Messages:
     def __init__(self):
-        self.messages: List[Dict[str, str]] = []
+        self.messages: List[ChatCompletionMessageParam] = []
     
     def add_system(self, content: str) -> None:
         """Add a system message."""
-        self.messages.append({"role": "system", "content": content})
+        message: ChatCompletionSystemMessageParam = {"role": "system", "content": content}
+        self.messages.append(message)
     
     def add_user(self, content: str) -> None:
         """Add a user message."""
-        self.messages.append({"role": "user", "content": content})
+        message: ChatCompletionUserMessageParam = {"role": "user", "content": content}
+        self.messages.append(message)
     
     def add_assistant(self, content: str) -> None:
         """Add an assistant message."""
-        self.messages.append({"role": "assistant", "content": content})
+        message: ChatCompletionAssistantMessageParam = {"role": "assistant", "content": content}
+        self.messages.append(message)
     
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ChatCompletionMessageParam]:
         return iter(self.messages)
 
 @retry(tries=3, backoff=2)
@@ -59,4 +63,8 @@ def call_model(model: str, messages: Messages) -> str:
         extra_body=extra_body
     )
     
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    if content is None:
+        raise ValueError("Model response content was None")
+    
+    return content
