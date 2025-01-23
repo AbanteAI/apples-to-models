@@ -124,6 +124,11 @@ class Game(BaseModel):
 
         current_round = self.rounds[self.current_round]
 
+        # Check that all non-judge players have played
+        non_judge_players = set(range(len(self.players))) - {current_round.judge}
+        if set(current_round.moves.keys()) != non_judge_players:
+            raise ValueError("Not all players have played their cards yet")
+
         # Find the player who played the winning card
         winning_player = None
         for player_idx, move in current_round.moves.items():
