@@ -49,7 +49,7 @@ def call_model(model: str, messages: Messages) -> str:
     response = client.chat.completions.create(
         model=model,
         messages=list(messages),  # Convert Messages instance to list
-        temperature=0.7
+        temperature=0
     )
     
     content = response.choices[0].message.content
