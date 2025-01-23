@@ -42,6 +42,7 @@ class Player(BaseModel):
 class Game(BaseModel):
     """Represents the full game state"""
 
+    version: str = "1.0"  # Version of the game state format
     players: Dict[int, Player]  # player_index -> Player
     rounds: List[Round] = Field(default_factory=list)
     current_round: Optional[int] = None

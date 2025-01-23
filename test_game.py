@@ -61,6 +61,7 @@ def test_game_serialization():
         loaded_game = Game.load_game(f.name)
 
     # Verify game state was preserved
+    assert loaded_game.version == "1.0"
     assert len(loaded_game.players) == len(game.players)
     assert len(loaded_game.rounds) == len(game.rounds)
     assert loaded_game.current_round == game.current_round
