@@ -71,7 +71,7 @@ def test_game_serialization():
 
 
 def test_html_game_report():
-    from game_report import generate_html_report, save_html_report
+    from benchmark.game_report import generate_html_report, save_html_report
 
     players = ["Alice", "Bob", "Charlie"]
     game = Game.new_game(players)
