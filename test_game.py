@@ -70,6 +70,49 @@ def test_game_serialization():
     Path(f.name).unlink()
 
 
+def test_game_report():
+    players = ["Alice", "Bob", "Charlie"]
+    game = Game.new_game(players)
+
+    # Play a complete round
+    round = game.start_round()
+    judge_idx = round.judge
+    non_judge_players = [i for i in range(len(players)) if i != judge_idx]
+
+    # Players play cards
+    for player_idx in non_judge_players:
+        card_to_play = game.players[player_idx].hand[0]
+        game.play_card(player_idx, card_to_play, "Test thinking")
+
+    # Judge decides
+    played_cards = [move.played_card for move in round.moves.values()]
+    game.judge_round(played_cards[0], "Test reasoning")
+
+    # Generate report
+    report = game.generate_report()
+
+    # Verify report contains key information
+    assert "=== GAME REPORT ===" in report
+    assert "Players (3):" in report
+    assert "Total Rounds: 1" in report
+    assert "=== Round 1 ===" in report
+    assert "Green Card:" in report
+    assert "Judge:" in report
+    assert "Test thinking" in report
+    assert "Test reasoning" in report
+    assert "=== Final Standings ===" in report
+
+    # Test saving report
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+        game.save_report(f.name)
+        with open(f.name) as saved:
+            saved_report = saved.read()
+        assert saved_report == report
+
+    # Clean up
+    Path(f.name).unlink()
+
+
 def test_error_handling():
     players = ["Alice", "Bob"]
     game = Game.new_game(players)

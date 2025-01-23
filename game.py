@@ -186,3 +186,53 @@ class Game(BaseModel):
         with open(filepath) as f:
             data = json.load(f)
         return cls.model_validate(data)
+
+    def generate_report(self) -> str:
+        """Generate a detailed report of the game"""
+        report = []
+
+        # Game Overview
+        report.append("=== GAME REPORT ===")
+        report.append(f"\nPlayers ({len(self.players)}):")
+        for idx, player in self.players.items():
+            wins = len(player.won_rounds)
+            report.append(f"- {player.name}: {wins} win{'s' if wins != 1 else ''}")
+
+        # Round-by-round breakdown
+        report.append(f"\nTotal Rounds: {len(self.rounds)}")
+        for round in self.rounds:
+            report.append(f"\n=== Round {round.round_number + 1} ===")
+            report.append(f"Green Card: {round.green_card}")
+            report.append(f"Judge: {self.players[round.judge].name}")
+
+            # Player moves
+            report.append("\nMoves:")
+            for player_idx, move in round.moves.items():
+                player_name = self.players[player_idx].name
+                report.append(f"\n{player_name}:")
+                report.append(f"  Played: {move.played_card}")
+                report.append(f"  Thinking: {move.thinking}")
+
+            # Round decision
+            if round.decision:
+                winner_name = self.players[round.decision.winning_player].name
+                report.append(f"\nWinner: {winner_name}")
+                report.append(f"Winning Card: {round.decision.winning_card}")
+                report.append(f"Judge's Reasoning: {round.decision.reasoning}")
+
+        # Final Standings
+        report.append("\n=== Final Standings ===")
+        standings = [
+            (player.name, len(player.won_rounds)) for player in self.players.values()
+        ]
+        standings.sort(key=lambda x: x[1], reverse=True)
+        for name, wins in standings:
+            report.append(f"{name}: {wins} win{'s' if wins != 1 else ''}")
+
+        return "\n".join(report)
+
+    def save_report(self, filepath: str) -> None:
+        """Save the game report to a file"""
+        report = self.generate_report()
+        with open(filepath, "w") as f:
+            f.write(report)
