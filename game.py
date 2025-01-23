@@ -5,6 +5,38 @@ import json
 from pathlib import Path
 
 
+class Deck(BaseModel):
+    """Represents a deck of cards with draw and discard piles"""
+
+    draw_pile: List[str] = Field(default_factory=list)
+    discard_pile: List[str] = Field(default_factory=list)
+
+    @classmethod
+    def from_file(cls, filepath: Path) -> "Deck":
+        """Create a new deck from a file of card names"""
+        with open(filepath) as f:
+            cards = [line.strip() for line in f if line.strip()]
+        random.shuffle(cards)
+        return cls(draw_pile=cards)
+
+    def draw(self) -> str:
+        """Draw a card from the deck, reshuffling discards if needed"""
+        if not self.draw_pile and not self.discard_pile:
+            raise ValueError("No cards left in deck")
+
+        if not self.draw_pile:
+            # Reshuffle discards into draw pile
+            self.draw_pile = self.discard_pile
+            random.shuffle(self.draw_pile)
+            self.discard_pile = []
+
+        return self.draw_pile.pop()
+
+    def discard(self, card: str) -> None:
+        """Add a card to the discard pile"""
+        self.discard_pile.append(card)
+
+
 class PlayerMove(BaseModel):
     """Represents a player's move in a round"""
 
@@ -46,42 +78,36 @@ class Game(BaseModel):
     players: Dict[int, Player]  # player_index -> Player
     rounds: List[Round] = Field(default_factory=list)
     current_round: Optional[int] = None
-    red_deck: List[str] = Field(default_factory=list)
-    green_deck: List[str] = Field(default_factory=list)
+    red_deck: Deck = Field(default_factory=Deck)
+    green_deck: Deck = Field(default_factory=Deck)
 
     @classmethod
     def new_game(cls, player_names: List[str], cards_per_hand: int = 7) -> "Game":
         """Initialize a new game with the given players"""
         # Load card decks
         cards_dir = Path("cards")
-        with open(cards_dir / "red_cards.txt") as f:
-            red_cards = [line.strip() for line in f if line.strip()]
-        with open(cards_dir / "green_cards.txt") as f:
-            green_cards = [line.strip() for line in f if line.strip()]
-
-        # Shuffle decks
-        random.shuffle(red_cards)
-        random.shuffle(green_cards)
+        red_deck = Deck.from_file(cards_dir / "red_cards.txt")
+        green_deck = Deck.from_file(cards_dir / "green_cards.txt")
 
         # Create players with initial hands
         players = {}
         for i, name in enumerate(player_names):
-            hand = red_cards[:cards_per_hand]
-            red_cards = red_cards[cards_per_hand:]
+            hand = [red_deck.draw() for _ in range(cards_per_hand)]
             players[i] = Player(name=name, hand=hand)
 
         return cls(
-            players=players, red_deck=red_cards, green_deck=green_cards, current_round=0
+            players=players, red_deck=red_deck, green_deck=green_deck, current_round=0
         )
 
     def start_round(self) -> Round:
         """Start a new round, selecting the next judge and green card"""
-        if not self.green_deck:
+        try:
+            green_card = self.green_deck.draw()
+        except ValueError:
             raise ValueError("No more green cards in deck")
 
         round_num = len(self.rounds)
         judge = round_num % len(self.players)
-        green_card = self.green_deck.pop()
 
         new_round = Round(round_number=round_num, green_card=green_card, judge=judge)
         self.rounds.append(new_round)
@@ -103,14 +129,14 @@ class Game(BaseModel):
         if card not in player.hand:
             raise ValueError("Card not in player's hand")
 
-        # Draw replacement card
-        if not self.red_deck:
+        # Draw replacement card and update player's hand
+        try:
+            new_card = self.red_deck.draw()
+            player.hand.remove(card)
+            player.hand.append(new_card)
+            self.red_deck.discard(card)
+        except ValueError:
             raise ValueError("No more red cards in deck")
-        new_card = self.red_deck.pop()
-
-        # Update player's hand
-        player.hand.remove(card)
-        player.hand.append(new_card)
 
         # Record the move
         current_round.moves[player_index] = PlayerMove(
