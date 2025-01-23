@@ -70,6 +70,64 @@ def test_game_serialization():
     Path(f.name).unlink()
 
 
+def test_html_game_report():
+    from game_report import generate_html_report, save_html_report
+
+    players = ["Alice", "Bob", "Charlie"]
+    game = Game.new_game(players)
+
+    # Play a complete round
+    round = game.start_round()
+    judge_idx = round.judge
+    non_judge_players = [i for i in range(len(players)) if i != judge_idx]
+
+    # Players play cards
+    for player_idx in non_judge_players:
+        card_to_play = game.players[player_idx].hand[0]
+        game.play_card(player_idx, card_to_play, "Test thinking")
+
+    # Judge decides
+    played_cards = [move.played_card for move in round.moves.values()]
+    game.judge_round(played_cards[0], "Test reasoning")
+
+    # Generate report
+    report = generate_html_report(game)
+
+    # Verify report contains key HTML elements and game information
+    assert "<!DOCTYPE html>" in report
+    assert "<html>" in report
+    assert "<head>" in report
+    assert "<body>" in report
+
+    # Check for interactive elements
+    assert "function toggleThinking" in report
+    assert "onclick=" in report
+    assert 'class="thinking"' in report
+
+    # Check game content
+    assert "Total Rounds: 1" in report
+    assert "Green Card:" in report
+    assert "Judge:" in report
+    assert "Test thinking" in report
+    assert "Test reasoning" in report
+
+    # Check styling
+    assert "<style>" in report
+    assert "display: none" in report  # For hidden thinking sections
+    assert "background-color" in report  # For winner highlighting
+
+    # Test saving report
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+        save_html_report(game, f.name)
+        with open(f.name) as saved:
+            saved_report = saved.read()
+        assert saved_report == report
+        assert "<!DOCTYPE html>" in saved_report
+
+    # Clean up
+    Path(f.name).unlink()
+
+
 def test_error_handling():
     players = ["Alice", "Bob"]
     game = Game.new_game(players)
