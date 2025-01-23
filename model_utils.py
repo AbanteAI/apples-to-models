@@ -1,8 +1,7 @@
-from typing import List, Dict, Any
+from typing import List, Dict
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
-from functools import lru_cache
 from retry import retry
 
 class Messages:
