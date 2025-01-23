@@ -10,4 +10,4 @@ This project is in its early stages of development. Stay tuned for updates!
 
 ## About Mentat
 
-This project is being developed using [Mentat](https://github.com/AbanteAI/mentat), an AI-powered coding assistant. The entire codebase is being written through interactions with the Mentat GitHub bot.
+This project is being developed using [Mentat](https://mentat.ai), an AI-powered coding assistant. The entire codebase is being written through interactions with the Mentat GitHub bot.
