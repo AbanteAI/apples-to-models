@@ -27,10 +27,15 @@ jobs:
         . .venv/bin/activate
         uv pip install -r requirements.txt
         
-    - name: Run ruff
+    - name: Run ruff linting
       run: |
         . .venv/bin/activate
         ruff check .
+
+    - name: Check ruff formatting
+      run: |
+        . .venv/bin/activate
+        ruff format --check .
       
     - name: Run pyright
       run: |
