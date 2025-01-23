@@ -96,6 +96,8 @@ class Game(BaseModel):
         current_round = self.rounds[self.current_round]
         if player_index == current_round.judge:
             raise ValueError("Judge cannot play a card")
+        if player_index in current_round.moves:
+            raise ValueError("Player has already played a card this round")
 
         player = self.players[player_index]
         if card not in player.hand:

@@ -91,6 +91,12 @@ def test_error_handling():
     with pytest.raises(ValueError):
         game.play_card(player_idx, "Invalid Card", "thinking")
 
+    # Test playing twice in same round
+    valid_card = game.players[player_idx].hand[0]
+    game.play_card(player_idx, valid_card, "first play")
+    with pytest.raises(ValueError, match="Player has already played a card this round"):
+        game.play_card(player_idx, game.players[player_idx].hand[0], "second play")
+
     # Test judging invalid card
     with pytest.raises(ValueError):
         game.judge_round("Invalid Card", "reasoning")
