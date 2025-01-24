@@ -5,9 +5,9 @@ This is a work in progress LLM benchmark being written entirely using Mentat (th
 ## How It Works
 
 In each round of the game:
-1. A red card (adjective) is drawn
-2. Players are dealt green cards (nouns)
-3. Players choose a green card from their hand that best matches the red card
+1. A green card (adjective) is drawn
+2. Players are dealt red cards (nouns)
+3. Players choose a red card from their hand that best matches the green card
 4. A judge selects the best match among the played cards
 
 The benchmark supports both real language models and random players, allowing for:
