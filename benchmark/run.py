@@ -122,8 +122,12 @@ def run_game(
         )
         cprint("\nJudge's Decision:", "blue")
         cprint(f"Winner: {winning_move.played_card}", "blue")
-        winning_player = game.players[winning_move.player_idx]
-        cprint(f"Player {winning_player.name} wins the round!", "blue")
+        # Find the player who played the winning card
+        for player_idx, move in moves.items():
+            if move.played_card == winning_move.played_card:
+                winning_player = game.players[player_idx]
+                cprint(f"Player {winning_player.name} wins the round!", "blue")
+                break
 
     # Save game (use default path if none specified)
     save_path = save_game_path if save_game_path else str(get_default_save_path())
