@@ -78,19 +78,14 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_player_messages
 
-    player = game.players[player_idx]
-    round = game.rounds[-1]
-    green_card = round.green_card
-
     try:
         messages = create_player_messages(game, player_idx)
-        response = call_model(model, messages)
-        thinking, card = response.split("|", 1)
-        thinking = thinking.strip()
+        card = card.strip()
 
         # Normalize the chosen card and player's hand
         normalized_card = normalize_card_name(card)
         # Find the matching card from the hand using normalized comparison
+        player = game.players[player_idx]
         for original_card in player.hand:
             if normalize_card_name(original_card) == normalized_card:
                 card = original_card
@@ -113,16 +108,11 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     from benchmark.prompts import create_judge_messages
 
     round = game.rounds[-1]
-    green_card = round.green_card
     moves = round.moves
     played_cards = [move.played_card for move in moves.values()]
 
-    messages = create_judge_messages(game)
-
-    response = None
     try:
-        response = call_model(model, messages)
-        try:
+        messages = create_judge_messages(game)
             # Require exactly one separator
             if response.count("|") != 1:
                 raise ValueError(
