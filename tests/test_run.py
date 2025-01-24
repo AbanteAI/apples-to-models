@@ -5,7 +5,8 @@ import json
 from unittest.mock import patch
 import sys
 
-from benchmark.run import create_parser, validate_args, run_game, main
+from benchmark.run import create_parser, validate_args, run_game, main, model_judge_move
+from benchmark.game import Game, Round, PlayerMove
 
 
 def test_argument_validation():
@@ -150,3 +151,44 @@ def test_benchmark_command(capsys):
         captured = capsys.readouterr()
         assert "Game completed!" in captured.out
         assert "Final scores:" in captured.out
+
+
+def test_judge_move_with_exact_cards():
+    """Test the judge's move with the exact cards from issue #24"""
+    # Create a mock game state
+    game = Game.new_game(["Player 1", "Player 2", "Player 3"])
+    round = Round(round_number=0, green_card="Graceful", judge=0)
+
+    # Add the exact moves from the issue
+    round.moves = {
+        1: PlayerMove(
+            played_card="Queen Elizabeth",
+            thinking="Some thinking",
+            drawn_card="New Card",
+        ),
+        2: PlayerMove(
+            played_card="Dreams", thinking="Some thinking", drawn_card="New Card"
+        ),
+    }
+    game.rounds = [round]
+
+    # Test case 1: Model responds with proper format
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "After careful consideration | Queen Elizabeth"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert thinking == "After careful consideration"
+
+    # Test case 2: Model responds without separator but includes card name
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "Queen Elizabeth is the most graceful choice"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert "is the most graceful choice" in thinking
+
+    # Test case 3: Model responds with invalid card
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "I choose The Moon because it's graceful"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+        assert thinking == "Random selection (model failed)"

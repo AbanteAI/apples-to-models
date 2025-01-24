@@ -130,11 +130,14 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     messages.add_system(
         "You are the judge in Apples to Apples, a word association game. "
         "In each round, there is a red card (adjective) and players play green cards (nouns) "
-        "that they think best match the red card. As the judge, you need to pick the best match."
+        "that they think best match the red card. As the judge, you need to pick the best match. "
+        "IMPORTANT: Your response must be in the format: 'reasoning | card_name' where card_name "
+        "must exactly match one of the played cards."
     )
 
     # Provide context about the current round
-    cards_list = "\n".join(f"- {move.played_card}" for move in moves.values())
+    played_cards = [move.played_card for move in moves.values()]
+    cards_list = "\n".join(f"- {card}" for card in played_cards)
     messages.add_user(
         f"The red card (adjective) is: {adjective}\n"
         f"The played green cards (nouns) are:\n{cards_list}\n"
@@ -146,20 +149,36 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
 
     try:
         response = call_model(model, messages)
-        thinking, card = response.split("|", 1)
-        thinking = thinking.strip()
-        card = card.strip()
+        print(f"\nRaw judge response: {response}")  # Print raw response for debugging
+
+        # First try to split on |
+        if "|" in response:
+            thinking, card = response.split("|", 1)
+            thinking = thinking.strip()
+            card = card.strip()
+        else:
+            # If no |, try to find an exact match of a played card in the response
+            for played_card in played_cards:
+                if played_card in response:
+                    thinking = response.replace(played_card, "").strip()
+                    card = played_card
+                    break
+            else:
+                raise ValueError(
+                    f"Could not find any played card in response: {response}"
+                )
 
         # Validate that the chosen card was actually played
         if not any(move.played_card == card for move in moves.values()):
             raise ValueError(
-                f"Model chose card '{card}' which was not among the played cards"
+                f"Model chose card '{card}' which was not among the played cards: {played_cards}"
             )
 
         return card, thinking
     except Exception as e:
         # Fallback to random selection if model fails
         print(f"Model error for judge, falling back to random: {str(e)}")
+        print(f"Raw model response was: {response}")  # Print raw response on error
         winning_move = random.choice(list(moves.values()))
         return winning_move.played_card, "Random selection (model failed)"
 
