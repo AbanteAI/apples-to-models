@@ -38,6 +38,7 @@ Bonsai Trees
 Bookstores
 Broadway
 Bubble Tea
+CUDA Cores
 Bubble Wrap
 Buddhism
 Burning Man
@@ -74,6 +75,7 @@ Dinosaurs
 Disney World
 Dogs
 Dragon Boats
+Dropout Layers
 Dreams
 Drive-in Movies
 Dungeons & Dragons
@@ -147,6 +149,7 @@ Libraries
 Lightning
 Lion Dance
 Live Concerts
+LLaMA Models
 Lost Cities
 Love Letters
 Lunar Eclipse
@@ -162,6 +165,7 @@ Mermaids
 Michelangelo
 Minecraft
 Modern Art
+Model Checkpoints
 Mona Lisa
 Mount Everest
 Mozart
@@ -171,6 +175,7 @@ Musical Theater
 NASA
 National Parks
 Native Art
+Neural Architecture
 Netflix
 New Year's Eve
 New York City
@@ -194,6 +199,7 @@ Penguins
 Philosophy
 Photography
 Picasso
+PyTorch
 Pillow Fights
 Pizza
 Plato
@@ -303,8 +309,15 @@ Wind Chimes
 Winter Olympics
 Wizardry
 World Cup
+Yann LeCun
 Yoga
 YouTube
 Zen Gardens
 Zodiac Signs
 Zombies
+Your Activation Functions
+Your Attention Span
+Your Hidden Layers
+Your Model Architecture
+Your Training Data
+Your Weight Initialization
