@@ -116,7 +116,7 @@ class Game(BaseModel):
 
     def play_card(self, player_index: int, card: str, thinking: str) -> None:
         """Play a card for the given player in the current round"""
-        if self.current_round is None:
+        if self.current_round is None or len(self.rounds) <= self.current_round:
             raise ValueError("No active round")
 
         current_round = self.rounds[self.current_round]

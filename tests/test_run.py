@@ -50,7 +50,7 @@ def test_argument_validation():
         validate_args(args)
 
 
-@patch("benchmark.run.call_model")
+@patch("benchmark.model_utils.call_model")
 def test_run_game(mock_call_model):
     # Mock model responses
     mock_call_model.return_value = "Test Card|Because it matches"
@@ -192,7 +192,7 @@ def test_judge_move_with_exact_cards():
     game.rounds = [round]
 
     # Test case 1: Model responds with proper format
-    with patch("benchmark.run.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model") as mock_call:
         mock_call.return_value = "After careful consideration | Queen Elizabeth"
         card, thinking = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
