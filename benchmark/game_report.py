@@ -43,36 +43,36 @@ def generate_cumulative_wins_chart(game: Game) -> str:
 
 
 def generate_win_percentage_chart(game: Game) -> str:
-    """Generate a stacked area chart showing win percentages per round"""
+    """Generate a stacked area chart showing cumulative win percentages"""
     plt.figure(figsize=(10, 6))
 
-    # Calculate win percentages for each round
-    round_percentages = []
+    # Calculate cumulative wins for each player
     player_names = []
+    cumulative_wins = []
 
     for player_id, player in game.players.items():
         player_names.append(player.name)
-        wins_per_round = []
+        wins = [0]  # Start with 0 wins
         for round_num in range(len(game.rounds)):
             round = game.rounds[round_num]
             if round.decision and round.decision.winning_player == player_id:
-                wins_per_round.append(1)
+                wins.append(wins[-1] + 1)
             else:
-                wins_per_round.append(0)
-        round_percentages.append(wins_per_round)
+                wins.append(wins[-1])
+        cumulative_wins.append(wins[1:])  # Remove the initial 0
 
-    # Convert to numpy array and calculate percentages
-    round_percentages = np.array(round_percentages)
-    round_sums = round_percentages.sum(axis=0)
-    round_sums[round_sums == 0] = 1  # Avoid division by zero
-    percentages = round_percentages / round_sums[None, :] * 100
+    # Convert to numpy array and calculate cumulative percentages
+    cumulative_wins = np.array(cumulative_wins)
+    round_totals = cumulative_wins.sum(axis=0)
+    round_totals[round_totals == 0] = 1  # Avoid division by zero
+    cumulative_percentages = cumulative_wins / round_totals[None, :] * 100
 
     # Create stacked area chart
-    plt.stackplot(range(len(game.rounds)), percentages, labels=player_names)
+    plt.stackplot(range(len(game.rounds)), cumulative_percentages, labels=player_names)
 
-    plt.title("Win Percentage by Round")
+    plt.title("Cumulative Win Percentage")
     plt.xlabel("Round Number")
-    plt.ylabel("Win Percentage")
+    plt.ylabel("Percentage of Total Wins")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.grid(True, linestyle="--", alpha=0.7)
 
@@ -208,7 +208,7 @@ def generate_html_report(game: Game) -> str:
             <img src="data:image/png;base64,{}" alt="Cumulative Wins Chart" style="max-width: 100%; height: auto;">
         </div>
         <div class="chart">
-            <h3>Win Percentages by Round</h3>
+            <h3>Cumulative Win Percentages</h3>
             <img src="data:image/png;base64,{}" alt="Win Percentages Chart" style="max-width: 100%; height: auto;">
         </div>
     </div>
