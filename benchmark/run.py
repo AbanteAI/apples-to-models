@@ -83,7 +83,7 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
     green_card = round.green_card
 
     try:
-        messages = create_player_messages(player_idx, green_card, player.hand)
+        messages = create_player_messages(game, player_idx)
         response = call_model(model, messages)
         thinking, card = response.split("|", 1)
         thinking = thinking.strip()
@@ -117,7 +117,7 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     moves = round.moves
     played_cards = [move.played_card for move in moves.values()]
 
-    messages = create_judge_messages(green_card, played_cards)
+    messages = create_judge_messages(game)
 
     response = None
     try:

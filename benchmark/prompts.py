@@ -52,10 +52,7 @@ def create_game_history_messages(
     )
 
     # Add history of completed rounds
-    for past_round in game.rounds:
-        if past_round.round_number >= current_round.round_number:
-            break
-
+    for past_round in game.rounds[: current_round.round_number]:
         messages.add_user(f"\nRound {past_round.round_number + 1}:")
         messages.add_user(f"The green card is: {past_round.green_card}")
         messages.add_user(f"Player {past_round.judge + 1} is the judge.")
@@ -96,6 +93,8 @@ def create_player_messages(game: Game, player_idx: int) -> Messages:
     Returns:
         Messages object containing the complete conversation history and current instructions
     """
+    if game.current_round is None:
+        raise ValueError("No active round")
     current_round = game.rounds[game.current_round]
     messages = create_game_history_messages(game, current_round, player_idx)
 
@@ -138,6 +137,8 @@ def create_judge_messages(game: Game) -> Messages:
     Returns:
         Messages object containing the complete conversation history and current instructions
     """
+    if game.current_round is None:
+        raise ValueError("No active round")
     current_round = game.rounds[game.current_round]
     messages = create_game_history_messages(game, current_round)
 
