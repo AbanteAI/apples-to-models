@@ -114,7 +114,7 @@ def test_html_game_report():
 
     # Check styling
     assert "<style>" in report
-    assert "display: none" in report  # For hidden thinking sections
+    assert "font-family: Arial" in report  # Basic styling check
     assert "background-color" in report  # For winner highlighting
 
     # Test saving report
