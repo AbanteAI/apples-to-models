@@ -156,35 +156,36 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     response = None
     try:
         response = call_model(model, messages)
-        print(f"\nRaw judge response: {response}")  # Print raw response for debugging
+        try:
+            # Require exactly one separator
+            if response.count("|") != 1:
+                raise ValueError(
+                    f"Response must contain exactly one '|' separator: {response}"
+                )
 
-        # Require exactly one separator
-        if response.count("|") != 1:
-            raise ValueError(
-                f"Response must contain exactly one '|' separator: {response}"
-            )
+            thinking, card = response.split("|", 1)
+            thinking = thinking.strip()
+            card = card.strip()
 
-        thinking, card = response.split("|", 1)
-        thinking = thinking.strip()
-        card = card.strip()
+            # Normalize card name and find match
+            normalized_card = normalize_card_name(card)
+            for played_card in played_cards:
+                if normalize_card_name(played_card) == normalized_card:
+                    card = played_card
+                    break
+            else:
+                raise ValueError(
+                    f"Could not find matching card '{card}' among played cards: {played_cards}"
+                )
 
-        # Normalize card name and find match
-        normalized_card = normalize_card_name(card)
-        for played_card in played_cards:
-            if normalize_card_name(played_card) == normalized_card:
-                card = played_card
-                break
-        else:
-            raise ValueError(
-                f"Could not find matching card '{card}' among played cards: {played_cards}"
-            )
-
-        return card, thinking
+            return card, thinking
+        except Exception as e:
+            # Print raw response only when there's an error parsing it
+            print(f"\nError parsing judge response. Raw response was: {response}")
+            raise e
     except Exception as e:
         # Fallback to random selection if model fails
         print(f"Model error for judge, falling back to random: {str(e)}")
-        if response is not None:
-            print(f"Raw model response was: {response}")  # Print raw response on error
         winning_move = random.choice(list(moves.values()))
         return winning_move.played_card, "Random selection (model failed)"
 
