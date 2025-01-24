@@ -182,7 +182,9 @@ def run_game(
     while len(game.rounds) < num_rounds:
         round = game.start_round()
         cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
-        cprint(f"Judge: {game.players[round.judge].name}", "yellow")
+        cprint(
+            f"Judge: {game.players[round.judge].name} (Player {round.judge})", "yellow"
+        )
         cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
         # Have non-judge players make moves
@@ -190,7 +192,7 @@ def run_game(
             if player_idx != round.judge:
                 model = models[player_idx]
                 player = game.players[player_idx]
-                cprint(f"\n{player.name}'s turn", "red")
+                cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
                 cprint(f"Hand: {', '.join(player.hand)}", "red")
 
                 if model == "random":
@@ -216,7 +218,10 @@ def run_game(
             for player_idx, move in moves.items():
                 if move.played_card == winning_move.played_card:
                     winning_player = game.players[player_idx]
-                    cprint(f"Player {winning_player.name} wins the round!", "green")
+                    cprint(
+                        f"{winning_player.name} (Player {player_idx}) wins the round!",
+                        "green",
+                    )
                     break
         else:
             winning_card, thinking = model_judge_move(game, judge_model)
@@ -226,7 +231,10 @@ def run_game(
             for player_idx, move in round.moves.items():
                 if move.played_card == winning_card:
                     winning_player = game.players[player_idx]
-                    cprint(f"Player {winning_player.name} wins the round!", "green")
+                    cprint(
+                        f"{winning_player.name} (Player {player_idx}) wins the round!",
+                        "green",
+                    )
                     cprint(f"Reasoning: {thinking}", "green")
                     break
 
