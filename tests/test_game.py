@@ -153,12 +153,12 @@ def test_error_handling():
     # Test playing twice in same round
     valid_card = game.players[player_idx].hand[0]
     game.play_card(player_idx, valid_card, "first play")
-    with pytest.raises(ValueError, match="Player has already played a card this round"):
+    with pytest.raises(ValueError, match=".* has already played a card this round"):
         game.play_card(player_idx, game.players[player_idx].hand[0], "second play")
 
     # Test judging before all players have played
     game.start_round()
-    with pytest.raises(ValueError, match="Not all players have played their cards yet"):
+    with pytest.raises(ValueError, match="Waiting for players to play: .*"):
         game.judge_round(game.players[0].hand[0], "too early")
 
     # Test judging invalid card

@@ -26,7 +26,12 @@ def generate_cumulative_wins_chart(game: Game) -> str:
 
     # Plot cumulative wins
     for player_id, wins in player_wins.items():
-        plt.plot(range(len(wins)), wins, label=game.players[player_id].name, marker="o")
+        plt.plot(
+            range(len(wins)),
+            wins,
+            label=f"{game.players[player_id].name} (Player {player_id})",
+            marker="o",
+        )
 
     plt.title("Cumulative Wins by Player")
     plt.xlabel("Round Number")
@@ -51,7 +56,7 @@ def generate_win_percentage_chart(game: Game) -> str:
     cumulative_wins = []
 
     for player_id, player in game.players.items():
-        player_names.append(player.name)
+        player_names.append(f"{player.name} (Player {player_id})")
         wins = [0]  # Start with 0 wins
         for round_num in range(len(game.rounds)):
             round = game.rounds[round_num]
@@ -174,6 +179,17 @@ def generate_html_report(game: Game) -> str:
             padding: 8px 10px;
             margin-bottom: 8px;
             border-radius: 6px;
+            transition: all 0.3s ease;
+        }}
+        .submission.winner {{
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .submission.waiting {{
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+            font-style: italic;
         }}
         .thinking {{
             margin-top: 6px;
@@ -196,7 +212,7 @@ def generate_html_report(game: Game) -> str:
     # Add standings to header
     for idx, stats in standings:
         html += f"""
-            <li>{stats['name']}: {stats['wins']} win{'s' if stats['wins'] != 1 else ''}</li>"""
+            <li>{stats['name']} (Player {idx}): {stats['wins']} win{'s' if stats['wins'] != 1 else ''}</li>"""
 
     html += """
         </ul>
@@ -231,30 +247,31 @@ def generate_html_report(game: Game) -> str:
 
 def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str:
     """Generate HTML for a single round"""
+    judge_name = players[round.judge].name
     html = f"""
     <div class="round">
         <div class="round-header">
             <h3>Round {round.round_number + 1}</h3>
-            <p><strong>Green Card:</strong> {round.green_card}</p>
+            <p><strong>Green Card:</strong> "{round.green_card}"</p>
+            <p><strong>Judge:</strong> {judge_name} (Player {round.judge})</p>
         </div>
 """
-
-    # Add winner section if round has been decided
-    if round.decision:
-        html += f"""
-        <div class="winner-section">
-            <h4>🏆 Winner: {players[round.decision.winning_player].name}</h4>
-            <p><strong>Winning Card:</strong> {round.decision.winning_card}</p>
-        </div>"""
 
     # Add judge section
     html += f"""
         <div class="judge-section">
-            <h4>👨‍⚖️ Judge: {players[round.judge].name}</h4>"""
+            <h4>👨‍⚖️ Judge: {judge_name} (Player {round.judge})</h4>"""
     if round.decision:
         html += f"""
-            <p><strong>Reasoning:</strong> {round.decision.reasoning}</p>"""
-    html += """
+            <p><strong>Decision:</strong> {round.decision.reasoning}</p>
+        </div>
+        <div class="winner-section">
+            <h4>🏆 Winner: {players[round.decision.winning_player].name} (Player {round.decision.winning_player})</h4>
+            <p><strong>Winning Card:</strong> "{round.decision.winning_card}"</p>
+        </div>"""
+    else:
+        html += """
+            <p>Waiting for decision...</p>
         </div>"""
 
     # Add submissions section
@@ -262,17 +279,28 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
         <div class="submissions">
             <h4>📝 Submissions:</h4>"""
 
-    # Add each player's submission (excluding judge)
-    for player_idx, move in round.moves.items():
-        if player_idx != round.judge:  # Only show non-judge players' submissions
+    # Get all non-judge players
+    non_judge_players = [(idx, players[idx]) for idx in players if idx != round.judge]
+
+    # Add each player's submission or waiting message
+    for player_idx, player in non_judge_players:
+        if player_idx in round.moves:
+            move = round.moves[player_idx]
+            submission_class = "submission"
+            if round.decision and player_idx == round.decision.winning_player:
+                submission_class += " winner"
             html += f"""
-            <div class="submission">
-                <p><strong>Player:</strong> {players[player_idx].name}</p>
-                <p><strong>Card Played:</strong> {move.played_card}</p>
+            <div class="{submission_class}">
+                <p><strong>{player.name} (Player {player_idx})'s Card:</strong> "{move.played_card}"</p>
                 <div class="thinking">
                     <strong>Reasoning:</strong><br>
                     {move.thinking}
                 </div>
+            </div>"""
+        else:
+            html += f"""
+            <div class="submission waiting">
+                <p>Waiting for {player.name} (Player {player_idx}) to play a card...</p>
             </div>"""
 
     html += """

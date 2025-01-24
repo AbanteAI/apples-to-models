@@ -120,14 +120,15 @@ class Game(BaseModel):
             raise ValueError("No active round")
 
         current_round = self.rounds[self.current_round]
-        if player_index == current_round.judge:
-            raise ValueError("Judge cannot play a card")
-        if player_index in current_round.moves:
-            raise ValueError("Player has already played a card this round")
-
         player = self.players[player_index]
+
+        if player_index == current_round.judge:
+            raise ValueError(f"{player.name} is the judge and cannot play a card")
+        if player_index in current_round.moves:
+            raise ValueError(f"{player.name} has already played a card this round")
+
         if card not in player.hand:
-            raise ValueError("Card not in player's hand")
+            raise ValueError(f"Card '{card}' is not in {player.name}'s hand")
 
         # Draw replacement card and update player's hand
         try:
@@ -153,7 +154,15 @@ class Game(BaseModel):
         # Check that all non-judge players have played
         non_judge_players = set(range(len(self.players))) - {current_round.judge}
         if set(current_round.moves.keys()) != non_judge_players:
-            raise ValueError("Not all players have played their cards yet")
+            # Find who hasn't played yet
+            missing_players = [
+                self.players[i].name
+                for i in non_judge_players
+                if i not in current_round.moves
+            ]
+            raise ValueError(
+                f"Waiting for players to play: {', '.join(missing_players)}"
+            )
 
         # Find the player who played the winning card
         winning_player = None
@@ -163,7 +172,7 @@ class Game(BaseModel):
                 break
 
         if winning_player is None:
-            raise ValueError("Winning card was not played this round")
+            raise ValueError(f"Card '{winning_card}' was not played this round")
 
         # Record the decision
         current_round.decision = JudgeDecision(
