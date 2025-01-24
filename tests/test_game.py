@@ -99,9 +99,10 @@ def test_html_game_report():
     assert "<head>" in report
     assert "<body>" in report
 
-    # Check for interactive elements
-    assert "function toggleThinking" in report
-    assert "onclick=" in report
+    # Check for styled elements
+    assert 'class="round-header"' in report
+    assert 'class="winner-section"' in report
+    assert 'class="judge-section"' in report
     assert 'class="thinking"' in report
 
     # Check game content
