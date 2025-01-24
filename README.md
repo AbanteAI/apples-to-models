@@ -1,12 +1,6 @@
 # Apples to Models
 
-Apples to Models is a language model benchmark based on the popular word association game "Apples to Apples". While on the surface it evaluates word relationships, the benchmark actually measures several sophisticated capabilities:
-
-1. **Contextual Understanding**: Models must understand relationships between adjectives and nouns in various contexts.
-2. **Strategic Gameplay**: Models can learn and adapt their strategy based on other players' behaviors.
-3. **Meta-Learning**: Models can observe how different players (including other models) make judgments and adjust their play accordingly.
-4. **Long-Context Reasoning**: In longer games, models can learn patterns in how specific players or models tend to judge and use this information to improve their chances of winning.
-5. **Strategic Judging**: Models can make judging decisions that optimize their chances of winning, such as avoiding selections that might benefit stronger players.
+This is a work in progress LLM benchmark being written entirely using Mentat (the GitHub bot). The project aims to provide a framework for comparing and evaluating different language models.
 
 ## How It Works
 
@@ -61,11 +55,7 @@ The benchmark uses the OpenRouter API for model access. Set up your environment:
 
 🚧 **Work in Progress** 🚧
 
-While the core game mechanics and model integration are implemented, we're actively working on:
-- Expanding the card sets
-- Adding more sophisticated scoring metrics
-- Improving model prompts
-- Adding detailed performance analysis tools
+This project is in its early stages of development. Stay tuned for updates!
 
 ## About Mentat
 
