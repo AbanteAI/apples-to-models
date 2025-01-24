@@ -91,15 +91,16 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
         f"You are Player {player_idx + 1}. The red card (adjective) is: {adjective}\n"
         f"Your hand (green cards) contains: {', '.join(player.hand)}\n"
         "Which green card from your hand best matches this red card? "
-        "Respond with just the card name and a brief explanation separated by '|'. "
-        "For example: 'Dinosaurs|They were absolutely enormous!'"
+        "Respond with your reasoning followed by the card name, separated by ' | '. "
+        "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
+        "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
     )
 
     try:
         response = call_model(model, messages)
-        card, thinking = response.split("|", 1)
-        card = card.strip()
+        thinking, card = response.split("|", 1)
         thinking = thinking.strip()
+        card = card.strip()
 
         # Validate that the chosen card is in the player's hand
         if card not in player.hand:
@@ -138,15 +139,16 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         f"The red card (adjective) is: {adjective}\n"
         f"The played green cards (nouns) are:\n{cards_list}\n"
         "Which green card best matches the red card? "
-        "Respond with just the card name and a brief explanation separated by '|'. "
-        "For example: 'Dinosaurs|They perfectly represent something enormous!'"
+        "Respond with your reasoning followed by the card name, separated by ' | '. "
+        "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
+        "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
     )
 
     try:
         response = call_model(model, messages)
-        card, thinking = response.split("|", 1)
-        card = card.strip()
+        thinking, card = response.split("|", 1)
         thinking = thinking.strip()
+        card = card.strip()
 
         # Validate that the chosen card was actually played
         if not any(move.played_card == card for move in moves.values()):
