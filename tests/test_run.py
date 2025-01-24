@@ -130,3 +130,23 @@ def test_main_error(capsys):
             main()
         captured = capsys.readouterr()
         assert "Error:" in captured.out
+
+
+def test_benchmark_command(capsys):
+    """Test that the benchmark runs successfully with the example command"""
+    test_args = [
+        "benchmark.run",
+        "--rounds",
+        "5",
+        "--players",
+        "3",
+        "--models",
+        "random",
+        "random",
+        "random",
+    ]
+    with patch.object(sys, "argv", test_args):
+        main()
+        captured = capsys.readouterr()
+        assert "Game completed!" in captured.out
+        assert "Final scores:" in captured.out
