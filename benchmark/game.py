@@ -121,7 +121,6 @@ class Game(BaseModel):
 
         current_round = self.rounds[self.current_round]
         player = self.players[player_index]
-        judge = self.players[current_round.judge]
 
         if player_index == current_round.judge:
             raise ValueError(f"{player.name} is the judge and cannot play a card")
@@ -151,7 +150,6 @@ class Game(BaseModel):
             raise ValueError("No active round")
 
         current_round = self.rounds[self.current_round]
-        judge = self.players[current_round.judge]
 
         # Check that all non-judge players have played
         non_judge_players = set(range(len(self.players))) - {current_round.judge}
