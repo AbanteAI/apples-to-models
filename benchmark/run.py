@@ -68,6 +68,11 @@ def random_player_move(game: Game, player_idx: int) -> tuple[str, str]:
     return card, thinking
 
 
+def normalize_card_name(card: str) -> str:
+    """Convert card name to lowercase and remove non-alphabetic characters"""
+    return "".join(c.lower() for c in card if c.isalpha())
+
+
 def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str]:
     """Make a model-based move for the given player"""
     from benchmark.model_utils import Messages, call_model
@@ -98,10 +103,15 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
         response = call_model(model, messages)
         thinking, card = response.split("|", 1)
         thinking = thinking.strip()
-        card = card.strip(".,!? ")
 
-        # Validate that the chosen card is in the player's hand
-        if card not in player.hand:
+        # Normalize the chosen card and player's hand
+        normalized_card = normalize_card_name(card)
+        # Find the matching card from the hand using normalized comparison
+        for original_card in player.hand:
+            if normalize_card_name(original_card) == normalized_card:
+                card = original_card
+                break
+        else:
             raise ValueError(f"Model chose card '{card}' which is not in player's hand")
 
         return card, thinking
@@ -152,24 +162,19 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         if "|" in response:
             thinking, card = response.split("|", 1)
             thinking = thinking.strip()
-            card = card.strip(".,!? ")
+            normalized_response = normalize_card_name(card)
         else:
-            # If no |, try to find an exact match of a played card in the response
-            for played_card in played_cards:
-                if played_card in response:
-                    thinking = response.replace(played_card, "").strip()
-                    card = played_card
-                    break
-            else:
-                raise ValueError(
-                    f"Could not find any played card in response: {response}"
-                )
+            # If no |, try to find a match in the response
+            normalized_response = normalize_card_name(response)
 
-        # Validate that the chosen card was actually played
-        if not any(move.played_card == card for move in moves.values()):
-            raise ValueError(
-                f"Model chose card '{card}' which was not among the played cards: {played_cards}"
-            )
+        # Find matching card using normalized comparison
+        for played_card in played_cards:
+            if normalize_card_name(played_card) in normalized_response:
+                thinking = response.replace(played_card, "").strip()
+                card = played_card
+                break
+        else:
+            raise ValueError(f"Could not find any played card in response: {response}")
 
         return card, thinking
     except Exception as e:

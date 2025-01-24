@@ -153,6 +153,25 @@ def test_benchmark_command(capsys):
         assert "Final scores:" in captured.out
 
 
+def test_normalize_card_name():
+    """Test the card name normalization function"""
+    from benchmark.run import normalize_card_name
+
+    # Test basic normalization
+    assert normalize_card_name("Queen Elizabeth") == "queenelizabeth"
+
+    # Test punctuation removal
+    assert normalize_card_name("Queen Elizabeth.") == "queenelizabeth"
+    assert normalize_card_name("Queen Elizabeth!") == "queenelizabeth"
+    assert normalize_card_name("Queen Elizabeth?") == "queenelizabeth"
+    assert normalize_card_name("Queen-Elizabeth") == "queenelizabeth"
+
+    # Test case normalization
+    assert normalize_card_name("QUEEN ELIZABETH") == "queenelizabeth"
+    assert normalize_card_name("queen elizabeth") == "queenelizabeth"
+    assert normalize_card_name("QuEeN eLiZaBeTh") == "queenelizabeth"
+
+
 def test_judge_move_with_exact_cards():
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
@@ -186,7 +205,21 @@ def test_judge_move_with_exact_cards():
         assert card == "Queen Elizabeth"
         assert "is the most graceful choice" in thinking
 
-    # Test case 3: Model responds with invalid card
+    # Test case 3: Model responds with punctuation
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "I choose Queen Elizabeth. She's very graceful!"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert "She's very graceful" in thinking
+
+    # Test case 4: Model responds with different case
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "QUEEN ELIZABETH is graceful"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert "is graceful" in thinking
+
+    # Test case 5: Model responds with invalid card
     with patch("benchmark.run.call_model") as mock_call:
         mock_call.return_value = "I choose The Moon because it's graceful"
         card, thinking = model_judge_move(game, "test-model")
