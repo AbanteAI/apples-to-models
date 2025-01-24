@@ -188,7 +188,7 @@ def run_game(
     while len(game.rounds) < num_rounds:
         round = game.start_round()
         cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
-        cprint(f"Judge: {game.players[round.judge].name}", "green")
+        cprint(f"Judge: {game.players[round.judge].name}", "yellow")
         cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
         # Have non-judge players make moves
