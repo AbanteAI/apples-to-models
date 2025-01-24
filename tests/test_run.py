@@ -199,35 +199,35 @@ def test_judge_move_with_exact_cards():
         assert thinking == "After careful consideration"
 
     # Test case 2: Model responds with proper format and punctuation
-    with patch("benchmark.run.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model") as mock_call:
         mock_call.return_value = "She's very graceful! | Queen Elizabeth."
         card, thinking = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
 
     # Test case 3: Model responds with proper format and different case
-    with patch("benchmark.run.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model") as mock_call:
         mock_call.return_value = "Most graceful choice | QUEEN ELIZABETH"
         card, thinking = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "Most graceful choice"
 
     # Test case 4: Model responds without separator
-    with patch("benchmark.run.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model") as mock_call:
         mock_call.return_value = "Queen Elizabeth is the most graceful choice"
         card, thinking = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
 
     # Test case 5: Model responds with multiple separators
-    with patch("benchmark.run.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model") as mock_call:
         mock_call.return_value = "First | Second | Third"
         card, thinking = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
 
     # Test case 6: Model responds with invalid card
-    with patch("benchmark.run.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model") as mock_call:
         mock_call.return_value = "This is graceful | The Moon"
         card, thinking = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
