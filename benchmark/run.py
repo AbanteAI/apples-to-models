@@ -73,7 +73,9 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
 
     player = game.players[player_idx]
     round = game.rounds[-1]
-    red_card = round.red_card
+    adjective = (
+        round.green_card
+    )  # Note: Despite the name, this is the red (adjective) card
 
     # Create conversation for the model
     messages = Messages()
@@ -85,7 +87,7 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
 
     # Provide context about the current round
     messages.add_user(
-        f"You are Player {player_idx + 1}. The red card (adjective) is: {red_card}\n"
+        f"You are Player {player_idx + 1}. The red card (adjective) is: {adjective}\n"
         f"Your hand (green cards) contains: {', '.join(player.hand)}\n"
         "Which green card from your hand best matches this red card? "
         "Respond with just the card name and a brief explanation separated by '|'. "
@@ -116,7 +118,9 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     from benchmark.model_utils import Messages, call_model
 
     round = game.rounds[-1]
-    red_card = round.red_card
+    adjective = (
+        round.green_card
+    )  # Note: Despite the name, this is the red (adjective) card
     moves = round.moves
 
     # Create conversation for the model
@@ -128,9 +132,9 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     )
 
     # Provide context about the current round
-    cards_list = "\n".join(f"- {card}" for card in moves.values())
+    cards_list = "\n".join(f"- {move.played_card}" for move in moves.values())
     messages.add_user(
-        f"The red card (adjective) is: {red_card}\n"
+        f"The red card (adjective) is: {adjective}\n"
         f"The played green cards (nouns) are:\n{cards_list}\n"
         "Which green card best matches the red card? "
         "Respond with just the card name and a brief explanation separated by '|'. "
