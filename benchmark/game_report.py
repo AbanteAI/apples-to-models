@@ -23,57 +23,57 @@ def generate_html_report(game: Game) -> str:
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
+            padding: 10px;
+            line-height: 1.4;
         }}
         .header {{
             background-color: #f8f9fa;
-            padding: 20px;
+            padding: 10px;
             border-radius: 8px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
         .round {{
             border: 1px solid #dee2e6;
-            padding: 20px;
-            margin-bottom: 30px;
+            padding: 10px;
+            margin-bottom: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }}
         .round-header {{
             background-color: #e9ecef;
-            padding: 15px;
-            margin: -20px -20px 20px -20px;
+            padding: 8px 10px;
+            margin: -10px -10px 10px -10px;
             border-radius: 8px 8px 0 0;
             border-bottom: 1px solid #dee2e6;
         }}
         .winner-section {{
             background-color: #d4edda;
             border: 1px solid #c3e6cb;
-            padding: 15px;
-            margin-bottom: 20px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
             border-radius: 6px;
         }}
         .judge-section {{
             background-color: #e2e3e5;
             border: 1px solid #d6d8db;
-            padding: 15px;
-            margin-bottom: 20px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
             border-radius: 6px;
         }}
         .submissions {{
-            margin-top: 20px;
+            margin-top: 10px;
         }}
         .submission {{
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
             border-radius: 6px;
         }}
         .thinking {{
-            margin-top: 10px;
-            padding: 10px;
+            margin-top: 6px;
+            padding: 6px 8px;
             background-color: #fff;
             border-left: 3px solid #6c757d;
             font-style: italic;
