@@ -1,7 +1,9 @@
+AGI
 Abraham Lincoln
 Acupuncture
 Albert Einstein
 Amazon Rainforest
+Anthropic
 Ancient Egypt
 Ancient Greece
 Ancient Rome
@@ -36,6 +38,7 @@ Bonsai Trees
 Bookstores
 Broadway
 Bubble Tea
+CUDA Cores
 Bubble Wrap
 Buddhism
 Burning Man
@@ -62,6 +65,9 @@ Cryptocurrency
 Cyberpunk
 DNA
 Da Vinci Code
+Deep Learning
+DeepMind
+Demis Hassabis
 Dance Battles
 Dark Chocolate
 Democracy
@@ -69,6 +75,7 @@ Dinosaurs
 Disney World
 Dogs
 Dragon Boats
+Dropout Layers
 Dreams
 Drive-in Movies
 Dungeons & Dragons
@@ -96,6 +103,8 @@ Galaxy Quest
 Game Shows
 Gardening
 Gladiators
+GPT Models
+Gradient Descent
 Global Warming
 Google
 Gothic Architecture
@@ -106,6 +115,7 @@ Great Wall
 Greek Mythology
 Guitar Solos
 Haiku Poetry
+Hallucinations
 Halloween
 Harry Potter
 Haunted Houses
@@ -139,6 +149,7 @@ Libraries
 Lightning
 Lion Dance
 Live Concerts
+LLaMA Models
 Lost Cities
 Love Letters
 Lunar Eclipse
@@ -154,6 +165,7 @@ Mermaids
 Michelangelo
 Minecraft
 Modern Art
+Model Checkpoints
 Mona Lisa
 Mount Everest
 Mozart
@@ -163,6 +175,7 @@ Musical Theater
 NASA
 National Parks
 Native Art
+Neural Architecture
 Netflix
 New Year's Eve
 New York City
@@ -172,6 +185,7 @@ Nobel Prize
 Northern Lights
 Ocean Waves
 Olympics
+OpenAI
 Opera
 Optical Illusions
 Orchids
@@ -185,9 +199,11 @@ Penguins
 Philosophy
 Photography
 Picasso
+PyTorch
 Pillow Fights
 Pizza
 Plato
+Prompt Engineering
 Poetry
 Pokemon
 Pop Art
@@ -198,6 +214,7 @@ Queen Elizabeth
 Quidditch
 Rainbows
 Reality TV
+ReLU
 Renaissance Art
 Road Trips
 Robot Wars
@@ -210,6 +227,7 @@ Rubik's Cube
 Safari Tours
 Salsa Dancing
 Samurai
+Sam Altman
 Santa Claus
 Sci-Fi Movies
 Science Labs
@@ -248,6 +266,7 @@ Tacos
 Tai Chi
 Tattoo Art
 Temple Ruins
+TensorFlow
 Tesla Coils
 The Beatles
 The Great Gatsby
@@ -264,6 +283,7 @@ Time Travel
 Titanic
 Tokyo
 Treasure Maps
+Transformers
 Tree Houses
 Tribal Dance
 Twitter
@@ -275,6 +295,7 @@ Venice
 Video Games
 Vikings
 Vintage Cars
+Vision Transformers
 Virtual Reality
 Volcanoes
 Wall Street
@@ -288,8 +309,15 @@ Wind Chimes
 Winter Olympics
 Wizardry
 World Cup
+Yann LeCun
 Yoga
 YouTube
 Zen Gardens
 Zodiac Signs
 Zombies
+Your Activation Functions
+Your Attention Span
+Your Hidden Layers
+Your Model Architecture
+Your Training Data
+Your Weight Initialization
