@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apples-to-models"
+version = "0.1.0"
+description = "A benchmark for testing LLMs using Apples to Apples"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "retry>=0.9.2",
+    "pydantic>=2.0.0",
+    "pytest>=7.0.0",
+    "termcolor>=2.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["benchmark*"]
