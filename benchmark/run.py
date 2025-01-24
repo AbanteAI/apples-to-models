@@ -188,7 +188,7 @@ def run_game(
     while len(game.rounds) < num_rounds:
         round = game.start_round()
         cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
-        cprint(f"Judge: {game.players[round.judge].name}", "yellow")
+        cprint(f"Judge: {game.players[round.judge].name}", "green")
         cprint(
             f"Red Card: {round.green_card}", "yellow"
         )  # Note: green_card field contains the red (adjective) card
@@ -197,17 +197,21 @@ def run_game(
         for player_idx in range(num_players):
             if player_idx != round.judge:
                 model = models[player_idx]
+                player = game.players[player_idx]
+                cprint(f"\n{player.name}'s turn", "red")
+                cprint(f"Hand: {', '.join(player.hand)}", "red")
+
                 if model == "random":
                     card, thinking = random_player_move(game, player_idx)
                 else:
                     card, thinking = model_player_move(game, player_idx, model)
                 game.play_card(player_idx, card, thinking)
-                cprint(f"{game.players[player_idx].name} plays: {card}", "green")
-                cprint(f"Thinking: {thinking}", "green")
+                cprint(f"Plays: {card}", "red")
+                cprint(f"Thinking: {thinking}", "red")
 
         # Judge selects a winner
         judge_model = models[round.judge]
-        cprint("\nJudge's Decision:", "blue")
+        cprint("\nJudge's Decision:", "green")
         if judge_model == "random":
             moves = round.moves
             winning_move = random.choice(list(moves.values()))
@@ -215,23 +219,23 @@ def run_game(
                 winning_move.played_card,
                 "Random selection",
             )
-            cprint(f"Winner: {winning_move.played_card}", "blue")
+            cprint(f"Winner: {winning_move.played_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in moves.items():
                 if move.played_card == winning_move.played_card:
                     winning_player = game.players[player_idx]
-                    cprint(f"Player {winning_player.name} wins the round!", "blue")
+                    cprint(f"Player {winning_player.name} wins the round!", "green")
                     break
         else:
             winning_card, thinking = model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
-            cprint(f"Winner: {winning_card}", "blue")
+            cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in round.moves.items():
                 if move.played_card == winning_card:
                     winning_player = game.players[player_idx]
-                    cprint(f"Player {winning_player.name} wins the round!", "blue")
-                    cprint(f"Reasoning: {thinking}", "blue")
+                    cprint(f"Player {winning_player.name} wins the round!", "green")
+                    cprint(f"Reasoning: {thinking}", "green")
                     break
 
     # Save game (use default path if none specified)
