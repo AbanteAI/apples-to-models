@@ -147,7 +147,6 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
     # Add each player's submission (excluding judge)
     for player_idx, move in round.moves.items():
         if player_idx != round.judge:  # Only show non-judge players' submissions
-            is_winner = round.decision and round.decision.winning_player == player_idx
             html += f"""
             <div class="submission">
                 <p><strong>Player:</strong> {players[player_idx].name}</p>
