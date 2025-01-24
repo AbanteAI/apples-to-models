@@ -1,6 +1,12 @@
 # Apples to Models
 
-Apples to Models is a language model benchmark based on the popular word association game "Apples to Apples". The benchmark evaluates models' ability to understand contextual relationships between words and make appropriate matches between adjectives and nouns.
+Apples to Models is a language model benchmark based on the popular word association game "Apples to Apples". While on the surface it evaluates word relationships, the benchmark actually measures several sophisticated capabilities:
+
+1. **Contextual Understanding**: Models must understand relationships between adjectives and nouns in various contexts.
+2. **Strategic Gameplay**: Models can learn and adapt their strategy based on other players' behaviors.
+3. **Meta-Learning**: Models can observe how different players (including other models) make judgments and adjust their play accordingly.
+4. **Long-Context Reasoning**: In longer games, models can learn patterns in how specific players or models tend to judge and use this information to improve their chances of winning.
+5. **Strategic Judging**: Models can make judging decisions that optimize their chances of winning, such as avoiding selections that might benefit stronger players.
 
 ## How It Works
 
