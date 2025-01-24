@@ -51,31 +51,6 @@ The benchmark uses the OpenRouter API for model access. Set up your environment:
    OPEN_ROUTER_KEY=your_api_key_here
    ```
 
-## Development
-
-### Running Tests
-
-The project uses pytest for testing. To run the tests:
-
-1. First, install the package in development mode:
-   ```bash
-   pip install -e .
-   ```
-
-2. Then run the tests using pytest:
-   ```bash
-   pytest tests/
-   ```
-
-Note: Some tests that require API keys or network access are skipped by default.
-
-### Examples
-
-You can find example code in the `examples` directory. To run an example:
-```bash
-python -m examples.model_utils_example
-```
-
 ## Development Status
 
 🚧 **Work in Progress** 🚧
