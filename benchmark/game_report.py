@@ -134,19 +134,21 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
         </div>
 """
 
-    # Add winner section if round has been decided
+    # Add judge section
+    html += f"""
+        <div class="judge-section">
+            <h4>👨‍⚖️ Judge: {judge_name}</h4>"""
     if round.decision:
-        winner_name = players[round.decision.winning_player].name
         html += f"""
+            <p><strong>Decision:</strong> {round.decision.reasoning}</p>
+        </div>
         <div class="winner-section">
-            <h4>🏆 Winner: {winner_name}</h4>
+            <h4>🏆 Winner: {players[round.decision.winning_player].name}</h4>
             <p><strong>Winning Card:</strong> "{round.decision.winning_card}"</p>
-            <p><strong>Judge's Reasoning:</strong> {round.decision.reasoning}</p>
         </div>"""
     else:
-        html += f"""
-        <div class="judge-section">
-            <p>Waiting for {judge_name} to make a decision...</p>
+        html += """
+            <p>Waiting for decision...</p>
         </div>"""
 
     # Add submissions section
