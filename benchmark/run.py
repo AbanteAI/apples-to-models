@@ -3,6 +3,7 @@ import random
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
+from termcolor import cprint
 
 from benchmark.game import Game
 
@@ -98,12 +99,19 @@ def run_game(
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
         round = game.start_round()
+        cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
+        cprint(f"Judge: {game.players[round.judge].name}", "yellow")
+        cprint(
+            f"Red Card: {round.green_card}", "yellow"
+        )  # Note: green_card field contains the red (adjective) card
 
         # Have non-judge players make moves
         for player_idx in range(num_players):
             if player_idx != round.judge:
                 card, thinking = random_player_move(game, player_idx)
                 game.play_card(player_idx, card, thinking)
+                cprint(f"{game.players[player_idx].name} plays: {card}", "green")
+                cprint(f"Thinking: {thinking}", "green", attrs=["dark"])
 
         # Judge randomly selects a winner
         moves = round.moves
@@ -112,6 +120,10 @@ def run_game(
             winning_move.played_card,
             "Random selection",
         )
+        cprint("\nJudge's Decision:", "blue")
+        cprint(f"Winner: {winning_move.played_card}", "blue")
+        winning_player = game.players[winning_move.player_idx]
+        cprint(f"Player {winning_player.name} wins the round!", "blue")
 
     # Save game (use default path if none specified)
     save_path = save_game_path if save_game_path else str(get_default_save_path())
@@ -136,9 +148,9 @@ def main():
         )
 
         # Print final scores
-        print("\nGame completed! Final scores:")
+        cprint("\n🎮 Game completed! Final scores:", "magenta", attrs=["bold"])
         for idx, player in game.players.items():
-            print(f"{player.name}: {len(player.won_rounds)} wins")
+            cprint(f"{player.name}: {len(player.won_rounds)} wins", "magenta")
 
     except Exception as e:
         print(f"Error: {e}")
