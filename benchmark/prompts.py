@@ -1,5 +1,6 @@
 from typing import List
 from benchmark.model_utils import Messages
+from benchmark.game import Game
 
 
 def create_player_messages(
