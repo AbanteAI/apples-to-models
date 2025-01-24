@@ -158,23 +158,26 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         response = call_model(model, messages)
         print(f"\nRaw judge response: {response}")  # Print raw response for debugging
 
-        # First try to split on |
-        if "|" in response:
-            thinking, card = response.split("|", 1)
-            thinking = thinking.strip()
-            normalized_response = normalize_card_name(card)
-        else:
-            # If no |, try to find a match in the response
-            normalized_response = normalize_card_name(response)
+        # Require exactly one separator
+        if response.count("|") != 1:
+            raise ValueError(
+                f"Response must contain exactly one '|' separator: {response}"
+            )
 
-        # Find matching card using normalized comparison
+        thinking, card = response.split("|", 1)
+        thinking = thinking.strip()
+        card = card.strip()
+
+        # Normalize card name and find match
+        normalized_card = normalize_card_name(card)
         for played_card in played_cards:
-            if normalize_card_name(played_card) in normalized_response:
-                thinking = response.replace(played_card, "").strip()
+            if normalize_card_name(played_card) == normalized_card:
                 card = played_card
                 break
         else:
-            raise ValueError(f"Could not find any played card in response: {response}")
+            raise ValueError(
+                f"Could not find matching card '{card}' among played cards: {played_cards}"
+            )
 
         return card, thinking
     except Exception as e:
