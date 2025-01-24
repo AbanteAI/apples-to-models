@@ -10,7 +10,7 @@ from benchmark.game import Game
 @pytest.fixture
 def sample_game():
     game = Game.new_game(["Alice", "Bob", "Charlie"])
-    round = game.start_round()
+    game.start_round()
 
     # Player 1 plays a card
     game.play_card(1, game.players[1].hand[0], "This card is perfect because...")
