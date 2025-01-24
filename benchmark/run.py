@@ -189,9 +189,7 @@ def run_game(
         round = game.start_round()
         cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
         cprint(f"Judge: {game.players[round.judge].name}", "green")
-        cprint(
-            f"Red Card: {round.green_card}", "yellow"
-        )  # Note: green_card field contains the red (adjective) card
+        cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
         # Have non-judge players make moves
         for player_idx in range(num_players):
