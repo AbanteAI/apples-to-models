@@ -75,31 +75,15 @@ def normalize_card_name(card: str) -> str:
 
 def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str]:
     """Make a model-based move for the given player"""
-    from benchmark.model_utils import Messages, call_model
+    from benchmark.model_utils import call_model
+    from benchmark.prompts import create_player_messages
 
     player = game.players[player_idx]
     round = game.rounds[-1]
     green_card = round.green_card
 
-    # Create conversation for the model
-    messages = Messages()
-    messages.add_system(
-        "You are playing Apples to Apples, a word association game. "
-        "In each round, there is a green card and players play red cards "
-        "that they think best match the green card. The judge picks the best match."
-    )
-
-    # Provide context about the current round
-    messages.add_user(
-        f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
-        f"Your hand (red cards) contains: {', '.join(player.hand)}\n"
-        "Which card from your hand best matches this green card? "
-        "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
-        "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
-    )
-
     try:
+        messages = create_player_messages(player_idx, green_card, player.hand)
         response = call_model(model, messages)
         thinking, card = response.split("|", 1)
         thinking = thinking.strip()
@@ -125,33 +109,15 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
 
 def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     """Make a model-based judging decision"""
-    from benchmark.model_utils import Messages, call_model
+    from benchmark.model_utils import call_model
+    from benchmark.prompts import create_judge_messages
 
     round = game.rounds[-1]
     green_card = round.green_card
     moves = round.moves
-
-    # Create conversation for the model
-    messages = Messages()
-    messages.add_system(
-        "You are the judge in Apples to Apples, a word association game. "
-        "In each round, there is a green card and players play red cards "
-        "that they think best match the green card. As the judge, you need to pick the best match. "
-        "IMPORTANT: Your response must be in the format: 'reasoning | card_name' where card_name "
-        "must exactly match one of the played cards."
-    )
-
-    # Provide context about the current round
     played_cards = [move.played_card for move in moves.values()]
-    cards_list = "\n".join(f"- {card}" for card in played_cards)
-    messages.add_user(
-        f"The green card is: {green_card}\n"
-        f"The played red cards are:\n{cards_list}\n"
-        "Which red card best matches the green card? "
-        "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
-        "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
-    )
+
+    messages = create_judge_messages(green_card, played_cards)
 
     response = None
     try:
