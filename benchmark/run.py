@@ -3,6 +3,7 @@ import random
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
+from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
 
@@ -186,6 +187,11 @@ def run_game(
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
         round = game.start_round()
+        cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
+        cprint(f"Judge: {game.players[round.judge].name}", "yellow")
+        cprint(
+            f"Red Card: {round.green_card}", "yellow"
+        )  # Note: green_card field contains the red (adjective) card
 
         # Have non-judge players make moves
         for player_idx in range(num_players):
@@ -196,9 +202,12 @@ def run_game(
                 else:
                     card, thinking = model_player_move(game, player_idx, model)
                 game.play_card(player_idx, card, thinking)
+                cprint(f"{game.players[player_idx].name} plays: {card}", "green")
+                cprint(f"Thinking: {thinking}", "green", attrs=["dark"])
 
         # Judge selects a winner
         judge_model = models[round.judge]
+        cprint("\nJudge's Decision:", "blue")
         if judge_model == "random":
             moves = round.moves
             winning_move = random.choice(list(moves.values()))
@@ -206,9 +215,24 @@ def run_game(
                 winning_move.played_card,
                 "Random selection",
             )
+            cprint(f"Winner: {winning_move.played_card}", "blue")
+            # Find the player who played the winning card
+            for player_idx, move in moves.items():
+                if move.played_card == winning_move.played_card:
+                    winning_player = game.players[player_idx]
+                    cprint(f"Player {winning_player.name} wins the round!", "blue")
+                    break
         else:
             winning_card, thinking = model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
+            cprint(f"Winner: {winning_card}", "blue")
+            # Find the player who played the winning card
+            for player_idx, move in round.moves.items():
+                if move.played_card == winning_card:
+                    winning_player = game.players[player_idx]
+                    cprint(f"Player {winning_player.name} wins the round!", "blue")
+                    cprint(f"Reasoning: {thinking}", "blue", attrs=["dark"])
+                    break
 
     # Save game (use default path if none specified)
     save_path = save_game_path if save_game_path else str(get_default_save_path())
@@ -233,9 +257,9 @@ def main():
         )
 
         # Print final scores
-        print("\nGame completed! Final scores:")
+        cprint("\n🎮 Game completed! Final scores:", "magenta", attrs=["bold"])
         for idx, player in game.players.items():
-            print(f"{player.name}: {len(player.won_rounds)} wins")
+            cprint(f"{player.name}: {len(player.won_rounds)} wins", "magenta")
 
     except Exception as e:
         print(f"Error: {e}")
