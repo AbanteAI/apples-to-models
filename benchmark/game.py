@@ -85,9 +85,9 @@ class Game(BaseModel):
     def new_game(cls, player_names: List[str], cards_per_hand: int = 7) -> "Game":
         """Initialize a new game with the given players"""
         # Load card decks from benchmark directory
-        cards_dir = Path(__file__).parent / "cards"
-        red_deck = Deck.from_file(cards_dir / "red_cards.txt")
-        green_deck = Deck.from_file(cards_dir / "green_cards.txt")
+        decks_dir = Path(__file__).parent / "decks"
+        red_deck = Deck.from_file(decks_dir / "red_cards.txt")
+        green_deck = Deck.from_file(decks_dir / "green_cards.txt")
 
         # Create players with initial hands
         players = {}
