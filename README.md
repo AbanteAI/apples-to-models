@@ -69,11 +69,11 @@ The project uses pytest for testing. To run the tests:
 
 Note: Some tests that require API keys or network access are skipped by default.
 
-### Scripts
+### Examples
 
-You can find utility scripts in the `scripts` directory. To run a script:
+You can find example code in the `examples` directory. To run an example:
 ```bash
-python -m scripts.model_utils_example
+python -m examples.model_utils_example
 ```
 
 ## Development Status
