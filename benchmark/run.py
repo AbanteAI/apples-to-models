@@ -147,6 +147,7 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
     )
 
+    response = None
     try:
         response = call_model(model, messages)
         print(f"\nRaw judge response: {response}")  # Print raw response for debugging
@@ -178,7 +179,8 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     except Exception as e:
         # Fallback to random selection if model fails
         print(f"Model error for judge, falling back to random: {str(e)}")
-        print(f"Raw model response was: {response}")  # Print raw response on error
+        if response is not None:
+            print(f"Raw model response was: {response}")  # Print raw response on error
         winning_move = random.choice(list(moves.values()))
         return winning_move.played_card, "Random selection (model failed)"
 
