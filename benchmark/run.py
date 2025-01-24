@@ -3,7 +3,7 @@ import random
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
-from termcolor import cprint
+from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
 
