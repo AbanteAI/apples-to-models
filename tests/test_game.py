@@ -158,7 +158,7 @@ def test_error_handling():
 
     # Test judging before all players have played
     game.start_round()
-    with pytest.raises(ValueError, match="Not all players have played their cards yet"):
+    with pytest.raises(ValueError, match="Waiting for players to play: .*"):
         game.judge_round(game.players[0].hand[0], "too early")
 
     # Test judging invalid card
