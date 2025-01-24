@@ -5,7 +5,8 @@ import json
 from unittest.mock import patch
 import sys
 
-from benchmark.run import create_parser, validate_args, run_game, main
+from benchmark.run import create_parser, validate_args, run_game, main, model_judge_move
+from benchmark.game import Game, Round, PlayerMove
 
 
 def test_argument_validation():
@@ -150,3 +151,84 @@ def test_benchmark_command(capsys):
         captured = capsys.readouterr()
         assert "Game completed!" in captured.out
         assert "Final scores:" in captured.out
+
+
+def test_normalize_card_name():
+    """Test the card name normalization function"""
+    from benchmark.run import normalize_card_name
+
+    # Test basic normalization
+    assert normalize_card_name("Queen Elizabeth") == "queenelizabeth"
+
+    # Test punctuation removal
+    assert normalize_card_name("Queen Elizabeth.") == "queenelizabeth"
+    assert normalize_card_name("Queen Elizabeth!") == "queenelizabeth"
+    assert normalize_card_name("Queen Elizabeth?") == "queenelizabeth"
+    assert normalize_card_name("Queen-Elizabeth") == "queenelizabeth"
+
+    # Test case normalization
+    assert normalize_card_name("QUEEN ELIZABETH") == "queenelizabeth"
+    assert normalize_card_name("queen elizabeth") == "queenelizabeth"
+    assert normalize_card_name("QuEeN eLiZaBeTh") == "queenelizabeth"
+
+
+def test_judge_move_with_exact_cards():
+    """Test the judge's move with the exact cards from issue #24"""
+    # Create a mock game state
+    game = Game.new_game(["Player 1", "Player 2", "Player 3"])
+    round = Round(round_number=0, green_card="Graceful", judge=0)
+
+    # Add the exact moves from the issue
+    round.moves = {
+        1: PlayerMove(
+            played_card="Queen Elizabeth",
+            thinking="Some thinking",
+            drawn_card="New Card",
+        ),
+        2: PlayerMove(
+            played_card="Dreams", thinking="Some thinking", drawn_card="New Card"
+        ),
+    }
+    game.rounds = [round]
+
+    # Test case 1: Model responds with proper format
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "After careful consideration | Queen Elizabeth"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert thinking == "After careful consideration"
+
+    # Test case 2: Model responds with proper format and punctuation
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "She's very graceful! | Queen Elizabeth."
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert thinking == "She's very graceful!"
+
+    # Test case 3: Model responds with proper format and different case
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "Most graceful choice | QUEEN ELIZABETH"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card == "Queen Elizabeth"
+        assert thinking == "Most graceful choice"
+
+    # Test case 4: Model responds without separator
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "Queen Elizabeth is the most graceful choice"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+        assert thinking == "Random selection (model failed)"
+
+    # Test case 5: Model responds with multiple separators
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "First | Second | Third"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+        assert thinking == "Random selection (model failed)"
+
+    # Test case 6: Model responds with invalid card
+    with patch("benchmark.run.call_model") as mock_call:
+        mock_call.return_value = "This is graceful | The Moon"
+        card, thinking = model_judge_move(game, "test-model")
+        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+        assert thinking == "Random selection (model failed)"
