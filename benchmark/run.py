@@ -203,7 +203,7 @@ def run_game(
                     card, thinking = model_player_move(game, player_idx, model)
                 game.play_card(player_idx, card, thinking)
                 cprint(f"{game.players[player_idx].name} plays: {card}", "green")
-                cprint(f"Thinking: {thinking}", "green", attrs=["dark"])
+                cprint(f"Thinking: {thinking}", "green")
 
         # Judge selects a winner
         judge_model = models[round.judge]
@@ -231,13 +231,25 @@ def run_game(
                 if move.played_card == winning_card:
                     winning_player = game.players[player_idx]
                     cprint(f"Player {winning_player.name} wins the round!", "blue")
-                    cprint(f"Reasoning: {thinking}", "blue", attrs=["dark"])
+                    cprint(f"Reasoning: {thinking}", "blue")
                     break
 
     # Save game (use default path if none specified)
     save_path = save_game_path if save_game_path else str(get_default_save_path())
     game.save_game(save_path)
     print(f"\nGame saved to: {save_path}")
+
+    # Generate and open HTML report
+    from benchmark.game_report import save_html_report
+    import webbrowser
+    import os
+
+    report_path = os.path.splitext(save_path)[0] + ".html"
+    save_html_report(game, report_path)
+    print(f"Game report saved to: {report_path}")
+
+    # Open the report in the default web browser
+    webbrowser.open(f"file://{os.path.abspath(report_path)}")
 
     return game
 
