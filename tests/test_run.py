@@ -31,13 +31,6 @@ def test_argument_validation():
     ):
         validate_args(args)
 
-    # Test unsupported model type
-    args = parser.parse_args(
-        ["--rounds", "5", "--players", "2", "--models", "random", "gpt4"]
-    )
-    with pytest.raises(NotImplementedError, match="Model type 'gpt4' not supported"):
-        validate_args(args)
-
     # Test nonexistent load file
     args = parser.parse_args(
         [
@@ -56,12 +49,25 @@ def test_argument_validation():
         validate_args(args)
 
 
-def test_run_game():
-    # Test new game
+@patch("benchmark.run.call_model")
+def test_run_game(mock_call_model):
+    # Mock model responses
+    mock_call_model.return_value = "Test Card|Because it matches"
+
+    # Test new game with random models
     game = run_game(num_rounds=3, num_players=2, models=["random", "random"])
     assert len(game.rounds) == 3
     assert len(game.players) == 2
     assert all(len(player.won_rounds) > 0 for player in game.players.values())
+    assert mock_call_model.call_count == 0  # No model calls for random players
+
+    # Test game with real model
+    mock_call_model.reset_mock()
+    game = run_game(num_rounds=2, num_players=2, models=["random", "gpt-4"])
+    assert len(game.rounds) == 2
+    assert len(game.players) == 2
+    # Should have model calls for the gpt-4 player's moves and when they judge
+    assert mock_call_model.call_count > 0
 
     # Test save and load game
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -124,3 +130,23 @@ def test_main_error(capsys):
             main()
         captured = capsys.readouterr()
         assert "Error:" in captured.out
+
+
+def test_benchmark_command(capsys):
+    """Test that the benchmark runs successfully with the example command"""
+    test_args = [
+        "benchmark.run",
+        "--rounds",
+        "5",
+        "--players",
+        "3",
+        "--models",
+        "random",
+        "random",
+        "random",
+    ]
+    with patch.object(sys, "argv", test_args):
+        main()
+        captured = capsys.readouterr()
+        assert "Game completed!" in captured.out
+        assert "Final scores:" in captured.out
