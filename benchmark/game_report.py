@@ -1,5 +1,87 @@
+import os
+import tempfile
 from typing import Dict
+import matplotlib.pyplot as plt
+import numpy as np
 from benchmark.game import Game, Round
+
+
+def generate_cumulative_wins_chart(game: Game) -> str:
+    """Generate a line chart showing cumulative wins over rounds for each player"""
+    plt.figure(figsize=(10, 6))
+
+    # Calculate cumulative wins for each player
+    player_wins = {idx: [0] for idx in game.players.keys()}
+    for round_num, round in enumerate(game.rounds):
+        if round.decision:
+            winner = round.decision.winning_player
+            for player_id in game.players.keys():
+                player_wins[player_id].append(
+                    player_wins[player_id][-1] + (1 if player_id == winner else 0)
+                )
+        else:
+            # If round not decided, repeat last value
+            for player_id in game.players.keys():
+                player_wins[player_id].append(player_wins[player_id][-1])
+
+    # Plot cumulative wins
+    for player_id, wins in player_wins.items():
+        plt.plot(range(len(wins)), wins, label=game.players[player_id].name, marker="o")
+
+    plt.title("Cumulative Wins by Player")
+    plt.xlabel("Round Number")
+    plt.ylabel("Total Wins")
+    plt.legend()
+    plt.grid(True, linestyle="--", alpha=0.7)
+
+    # Save chart
+    chart_path = os.path.join(tempfile.gettempdir(), "cumulative_wins.png")
+    plt.savefig(chart_path)
+    plt.close()
+
+    return chart_path
+
+
+def generate_win_percentage_chart(game: Game) -> str:
+    """Generate a stacked area chart showing win percentages per round"""
+    plt.figure(figsize=(10, 6))
+
+    # Calculate win percentages for each round
+    round_percentages = []
+    player_names = []
+
+    for player_id, player in game.players.items():
+        player_names.append(player.name)
+        wins_per_round = []
+        for round_num in range(len(game.rounds)):
+            round = game.rounds[round_num]
+            if round.decision and round.decision.winning_player == player_id:
+                wins_per_round.append(1)
+            else:
+                wins_per_round.append(0)
+        round_percentages.append(wins_per_round)
+
+    # Convert to numpy array and calculate percentages
+    round_percentages = np.array(round_percentages)
+    round_sums = round_percentages.sum(axis=0)
+    round_sums[round_sums == 0] = 1  # Avoid division by zero
+    percentages = round_percentages / round_sums[None, :] * 100
+
+    # Create stacked area chart
+    plt.stackplot(range(len(game.rounds)), percentages, labels=player_names)
+
+    plt.title("Win Percentage by Round")
+    plt.xlabel("Round Number")
+    plt.ylabel("Win Percentage")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.grid(True, linestyle="--", alpha=0.7)
+
+    # Save chart
+    chart_path = os.path.join(tempfile.gettempdir(), "win_percentages.png")
+    plt.savefig(chart_path, bbox_inches="tight")
+    plt.close()
+
+    return chart_path
 
 
 def generate_html_report(game: Game) -> str:
@@ -21,10 +103,32 @@ def generate_html_report(game: Game) -> str:
     <style>
         body {{
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 10px;
             line-height: 1.4;
+        }}
+        .charts {{
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .chart {{
+            margin-bottom: 30px;
+        }}
+        .chart h3 {{
+            margin-bottom: 15px;
+            color: #333;
+        }}
+        .chart img {{
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background-color: white;
+            padding: 10px;
         }}
         .header {{
             background-color: #f8f9fa;
@@ -97,8 +201,22 @@ def generate_html_report(game: Game) -> str:
     html += """
         </ul>
     </div>
+    <div class="charts">
+        <h2>Game Progress</h2>
+        <div class="chart">
+            <h3>Cumulative Wins Over Time</h3>
+            <img src="data:image/png;base64,{}" alt="Cumulative Wins Chart" style="max-width: 100%; height: auto;">
+        </div>
+        <div class="chart">
+            <h3>Win Percentages by Round</h3>
+            <img src="data:image/png;base64,{}" alt="Win Percentages Chart" style="max-width: 100%; height: auto;">
+        </div>
+    </div>
     <h2>Rounds</h2>
-"""
+""".format(
+        _encode_image(generate_cumulative_wins_chart(game)),
+        _encode_image(generate_win_percentage_chart(game)),
+    )
 
     # Add each round
     for round in game.rounds:
@@ -161,6 +279,14 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
         </div>
     </div>"""
     return html
+
+
+def _encode_image(image_path: str) -> str:
+    """Encode an image file as base64"""
+    import base64
+
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
 
 
 def save_html_report(game: Game, filepath: str) -> None:
