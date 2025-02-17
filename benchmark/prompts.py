@@ -4,11 +4,12 @@ from benchmark.game import Game
 
 
 def create_player_messages(
-    player_idx: int, green_card: str, hand: List[str]
+    game: "Game", player_idx: int, green_card: str, hand: List[str]
 ) -> Messages:
     """Create messages for a player to select a card to play.
 
     Args:
+        game: The current game state
         player_idx: The index of the player (0-based)
         green_card: The green card (adjective) for this round
         hand: List of red cards in the player's hand
@@ -22,6 +23,31 @@ def create_player_messages(
         "In each round, there is a green card and players play red cards "
         "that they think best match the green card. The judge picks the best match."
     )
+
+    # Add game history
+    for round in game.rounds[:-1]:  # All rounds except current
+        messages.add_user(
+            f"Round {round.round_number + 1} - Green Card: {round.green_card}"
+        )
+
+        # Show played cards and thinking
+        for pid, move in round.moves.items():
+            if pid == player_idx:
+                # Show player their own thinking
+                messages.add_assistant(
+                    f"Player {pid + 1} (You) played: {move.played_card}\n"
+                    f"Your thinking: {move.thinking}"
+                )
+            else:
+                # Only show the card played by others, not their thinking
+                messages.add_user(f"Player {pid + 1} played: {move.played_card}")
+
+        # Show judge's decision and reasoning (visible to all)
+        if round.decision:
+            messages.add_user(
+                f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
+                f"Their reasoning: {round.decision.reasoning}"
+            )
 
     messages.add_user(
         f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
