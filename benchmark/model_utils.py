@@ -87,9 +87,13 @@ class ModelLogger:
             raise ValueError("Messages not set before writing log")
 
         with open(log_file, "w", encoding="utf-8") as f:
-            # Write header information
+            # Write header with all metadata
+            duration = round(self.end_time - self.start_time, 3)
             f.write(f"Timestamp: {timestamp}\n")
             f.write(f"Model: {self.model}\n")
+            f.write(f"Duration: {duration} seconds\n")
+            if self.cost is not None:
+                f.write(f"Cost: ${self.cost:.4f}\n")
             f.write("-" * 80 + "\n\n")
 
             # Write messages in a conversation format
@@ -103,14 +107,7 @@ class ModelLogger:
             # Write model response
             f.write("\n=== Model Response ===\n")
             f.write(f"{self.response}\n")
-            f.write("\n" + "-" * 80 + "\n")
-
-            # Write timing and cost information
-            f.write("\n=== Call Information ===\n")
-            duration = round(self.end_time - self.start_time, 3)
-            f.write(f"Duration: {duration} seconds\n")
-            if self.cost is not None:
-                f.write(f"Cost: ${self.cost:.4f}\n")
+            f.write("\n" + "-" * 80)
 
 
 @retry(tries=3, backoff=2)
