@@ -1,6 +1,5 @@
 import os
 from benchmark.model_utils import Messages, call_model
-from pathlib import Path
 
 
 def main():
@@ -23,20 +22,19 @@ def main():
     # Call the model
     try:
         response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
-        print("\nModel response:", response)
 
-        # Get the most recent log file to show the cost
-        log_dir = Path("benchmark/logs")
-        log_files = sorted(log_dir.glob("*.log"))
-        if log_files:
-            latest_log = log_files[-1]
-            with open(latest_log, "r") as f:
-                log_content = f.read()
-                # Extract and display the cost line if it exists
-                for line in log_content.split("\n"):
-                    if line.startswith("Cost: $"):
-                        print("\nGeneration cost:", line)
-                        break
+        # Display all response information
+        print("\nModel Response:")
+        print("-" * 40)
+        print(f"Content: {response.content}")
+        print(f"Cost: ${response.cost:.4f}")
+        print(f"Total Tokens: {response.total_tokens}")
+        print(f"  - Prompt Tokens: {response.prompt_tokens}")
+        print(f"  - Completion Tokens: {response.completion_tokens}")
+
+        print(
+            "\nNote: A detailed log file has also been created in the benchmark/logs directory."
+        )
 
     except Exception as e:
         print("\nError calling model:", e)

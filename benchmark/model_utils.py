@@ -1,4 +1,5 @@
 from typing import List, Iterator, Optional
+from dataclasses import dataclass
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionMessageParam,
@@ -12,6 +13,17 @@ from retry import retry
 import time
 from datetime import datetime
 from pathlib import Path
+
+
+@dataclass
+class ModelResponse:
+    """Data class to hold model response data."""
+
+    content: str
+    cost: float
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
 
 
 class Messages:
@@ -53,8 +65,7 @@ class ModelLogger:
         self.end_time: float = 0
         self.model: str = ""
         self.messages: Optional[Messages] = None
-        self.response: Optional[str] = None
-        self.cost: Optional[float] = None
+        self.response: Optional[ModelResponse] = None
 
     def __enter__(self):
         self.start_time = time.time()
@@ -70,21 +81,17 @@ class ModelLogger:
         self.model = model
         self.messages = messages
 
-    def set_response(self, response: str):
+    def set_response(self, response: ModelResponse):
         """Set the model's response."""
         self.response = response
-
-    def set_cost(self, cost: float):
-        """Set the cost of the model call (optional)."""
-        self.cost = cost
 
     def _write_log(self) -> None:
         """Write the log file with all collected information in a human-readable format."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_file = self.log_dir / f"model_call_{timestamp.replace(':', '-')}.log"
 
-        if not self.messages:
-            raise ValueError("Messages not set before writing log")
+        if not self.messages or not self.response:
+            raise ValueError("Messages and response must be set before writing log")
 
         with open(log_file, "w", encoding="utf-8") as f:
             # Write header with all metadata
@@ -92,8 +99,10 @@ class ModelLogger:
             f.write(f"Timestamp: {timestamp}\n")
             f.write(f"Model: {self.model}\n")
             f.write(f"Duration: {duration} seconds\n")
-            if self.cost is not None:
-                f.write(f"Cost: ${self.cost:.4f}\n")
+            f.write(f"Cost: ${self.response.cost:.4f}\n")
+            f.write(f"Tokens: {self.response.total_tokens} ")
+            f.write(f"(prompt: {self.response.prompt_tokens}, ")
+            f.write(f"completion: {self.response.completion_tokens})\n")
             f.write("-" * 80 + "\n\n")
 
             # Write messages in a conversation format
@@ -106,7 +115,7 @@ class ModelLogger:
 
             # Write model response
             f.write("\n=== Model Response ===\n")
-            f.write(f"{self.response}\n")
+            f.write(f"{self.response.content}\n")
             f.write("\n" + "-" * 80)
 
 
@@ -142,7 +151,7 @@ def get_completion_cost(client: OpenAI, completion_id: str) -> float:
 
 
 @retry(tries=3, backoff=2)
-def call_model(model: str, messages: Messages) -> str:
+def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
 
@@ -151,7 +160,7 @@ def call_model(model: str, messages: Messages) -> str:
         messages: A Messages instance containing the conversation
 
     Returns:
-        The model's response content as a string
+        A ModelResponse object containing the response content, cost, and token counts
     """
     load_dotenv()  # Load environment variables
 
@@ -172,13 +181,23 @@ def call_model(model: str, messages: Messages) -> str:
         if content is None:
             raise ValueError("Model response content was None")
 
-        logger.set_response(content)
-
-        # Get the cost of the completion
+        # Get the cost and token counts
         try:
             cost = get_completion_cost(client, response.id)
-            logger.set_cost(cost)
         except Exception as e:
             print(f"Warning: Failed to get completion cost: {e}")
+            cost = 0.0
 
-        return content
+        usage = response.usage
+        model_response = ModelResponse(
+            content=content,
+            cost=cost,
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+        )
+
+        # Set the complete response object in the logger
+        logger.set_response(model_response)
+
+        return model_response
