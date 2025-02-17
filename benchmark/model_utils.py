@@ -188,13 +188,29 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
             print(f"Warning: Failed to get completion cost: {e}")
             cost = 0.0
 
+        # Handle the case where usage might be None
         usage = response.usage
+        if (
+            usage is None
+            or not hasattr(usage, "prompt_tokens")
+            or not hasattr(usage, "completion_tokens")
+            or not hasattr(usage, "total_tokens")
+        ):
+            # If usage data is missing, use default values
+            prompt_tokens = 0
+            completion_tokens = 0
+            total_tokens = 0
+        else:
+            prompt_tokens = usage.prompt_tokens
+            completion_tokens = usage.completion_tokens
+            total_tokens = usage.total_tokens
+
         model_response = ModelResponse(
             content=content,
             cost=cost,
-            prompt_tokens=usage.prompt_tokens,
-            completion_tokens=usage.completion_tokens,
-            total_tokens=usage.total_tokens,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
         )
 
         # Set the complete response object in the logger

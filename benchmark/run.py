@@ -85,7 +85,10 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
     try:
         messages = create_player_messages(game, player_idx, green_card, player.hand)
         response = call_model(model, messages)
-        thinking, card = response.split("|", 1)
+        if not response.content:
+            raise ValueError("Model response content was empty")
+
+        thinking, card = response.content.split("|", 1)
         thinking = thinking.strip()
 
         # Normalize the chosen card and player's hand
@@ -120,14 +123,18 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     response = None
     try:
         response = call_model(model, messages)
+        if not response.content:
+            raise ValueError("Model response content was empty")
+
         try:
+            content = response.content
             # Require exactly one separator
-            if response.count("|") != 1:
+            if content.count("|") != 1:
                 raise ValueError(
-                    f"Response must contain exactly one '|' separator: {response}"
+                    f"Response must contain exactly one '|' separator: {content}"
                 )
 
-            thinking, card = response.split("|", 1)
+            thinking, card = content.split("|", 1)
             thinking = thinking.strip()
             card = card.strip()
 
@@ -145,7 +152,9 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
             return card, thinking
         except Exception as e:
             # Print raw response only when there's an error parsing it
-            print(f"\nError parsing judge response. Raw response was: {response}")
+            print(
+                f"\nError parsing judge response. Raw response was: {response.content}"
+            )
             raise e
     except Exception as e:
         # Fallback to random selection if model fails
