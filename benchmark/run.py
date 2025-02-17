@@ -113,11 +113,9 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
     from benchmark.prompts import create_judge_messages
 
     round = game.rounds[-1]
-    green_card = round.green_card
     moves = round.moves
     played_cards = [move.played_card for move in moves.values()]
-
-    messages = create_judge_messages(green_card, played_cards)
+    messages = create_judge_messages(game, round.judge)
 
     response = None
     try:
