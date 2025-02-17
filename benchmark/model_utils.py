@@ -121,11 +121,25 @@ def get_completion_cost(client: OpenAI, completion_id: str) -> float:
     Returns:
         The total cost of the completion
     """
-    response = client.with_options(timeout=10.0).chat.completions.retrieve(
-        completion_id=completion_id
-    )
-    if response.usage and hasattr(response.usage, "total_cost"):
-        return float(response.usage.total_cost or 0.0)
+    import httpx
+
+    # OpenRouter's cost endpoint is separate from the OpenAI-compatible endpoints
+    cost_url = "https://openrouter.ai/api/v1/costs"
+    headers = {"Authorization": f"Bearer {client.api_key}"}
+
+    try:
+        with httpx.Client(timeout=10.0) as http_client:
+            response = http_client.get(cost_url, headers=headers)
+            response.raise_for_status()
+            costs_data = response.json()
+
+            # Find the cost for our completion ID
+            for cost_entry in costs_data.get("costs", []):
+                if cost_entry.get("id") == completion_id:
+                    return float(cost_entry.get("total_cost", 0.0))
+    except Exception as e:
+        print(f"Warning: Failed to get cost data: {e}")
+
     return 0.0
 
 
