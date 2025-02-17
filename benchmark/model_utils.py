@@ -123,20 +123,18 @@ def get_completion_cost(client: OpenAI, completion_id: str) -> float:
     """
     import httpx
 
-    # OpenRouter's cost endpoint is separate from the OpenAI-compatible endpoints
-    cost_url = "https://openrouter.ai/api/v1/costs"
+    # OpenRouter's cost endpoint for specific completion
+    cost_url = f"https://openrouter.ai/api/v1/costs/{completion_id}"
     headers = {"Authorization": f"Bearer {client.api_key}"}
 
     try:
         with httpx.Client(timeout=10.0) as http_client:
             response = http_client.get(cost_url, headers=headers)
             response.raise_for_status()
-            costs_data = response.json()
+            cost_data = response.json()
 
-            # Find the cost for our completion ID
-            for cost_entry in costs_data.get("costs", []):
-                if cost_entry.get("id") == completion_id:
-                    return float(cost_entry.get("total_cost", 0.0))
+            # The response should directly contain the cost information for this completion
+            return float(cost_data.get("total_cost", 0.0))
     except Exception as e:
         print(f"Warning: Failed to get cost data: {e}")
 
