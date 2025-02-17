@@ -29,7 +29,7 @@ def generate_cumulative_wins_chart(game: Game) -> str:
         plt.plot(
             range(len(wins)),
             wins,
-            label=f"{game.players[player_id].name} (Player {player_id})",
+            label=f"{game.players[player_id].name}",
             marker="o",
         )
 
@@ -56,7 +56,7 @@ def generate_win_percentage_chart(game: Game) -> str:
     cumulative_wins = []
 
     for player_id, player in game.players.items():
-        player_names.append(f"{player.name} (Player {player_id})")
+        player_names.append(f"{player.name}")
         wins = [0]  # Start with 0 wins
         for round_num in range(len(game.rounds)):
             round = game.rounds[round_num]
@@ -212,7 +212,7 @@ def generate_html_report(game: Game) -> str:
     # Add standings to header
     for idx, stats in standings:
         html += f"""
-            <li>{stats['name']} (Player {idx}): {stats['wins']} win{'s' if stats['wins'] != 1 else ''}</li>"""
+            <li>{stats['name']}: {stats['wins']} win{'s' if stats['wins'] != 1 else ''}</li>"""
 
     html += """
         </ul>
@@ -253,20 +253,20 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
         <div class="round-header">
             <h3>Round {round.round_number + 1}</h3>
             <p><strong>Green Card:</strong> "{round.green_card}"</p>
-            <p><strong>Judge:</strong> {judge_name} (Player {round.judge})</p>
+            <p><strong>Judge:</strong> {judge_name}</p>
         </div>
 """
 
     # Add judge section
     html += f"""
         <div class="judge-section">
-            <h4>👨‍⚖️ Judge: {judge_name} (Player {round.judge})</h4>"""
+            <h4>👨‍⚖️ Judge: {judge_name}</h4>"""
     if round.decision:
         html += f"""
             <p><strong>Decision:</strong> {round.decision.reasoning}</p>
         </div>
         <div class="winner-section">
-            <h4>🏆 Winner: {players[round.decision.winning_player].name} (Player {round.decision.winning_player})</h4>
+            <h4>🏆 Winner: {players[round.decision.winning_player].name}</h4>
             <p><strong>Winning Card:</strong> "{round.decision.winning_card}"</p>
         </div>"""
     else:
@@ -291,7 +291,7 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
                 submission_class += " winner"
             html += f"""
             <div class="{submission_class}">
-                <p><strong>{player.name} (Player {player_idx})'s Card:</strong> "{move.played_card}"</p>
+                <p><strong>{player.name}'s Card:</strong> "{move.played_card}"</p>
                 <div class="thinking">
                     <strong>Reasoning:</strong><br>
                     {move.thinking}
@@ -300,7 +300,7 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
         else:
             html += f"""
             <div class="submission waiting">
-                <p>Waiting for {player.name} (Player {player_idx}) to play a card...</p>
+                <p>Waiting for {player.name} to play a card...</p>
             </div>"""
 
     html += """
