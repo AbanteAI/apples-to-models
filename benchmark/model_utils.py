@@ -80,7 +80,7 @@ class ModelLogger:
             "duration_seconds": end_time - start_time,
             "cost": cost,
             "messages": [
-                {"role": msg["role"], "content": msg["content"]}
+                {"role": msg["role"], "content": msg.get("content", "") or ""}
                 for msg in messages.messages
             ],
             "response": response,
