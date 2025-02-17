@@ -83,7 +83,7 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
     green_card = round.green_card
 
     try:
-        messages = create_player_messages(player_idx, green_card, player.hand)
+        messages = create_player_messages(game, player_idx, green_card, player.hand)
         response = call_model(model, messages)
         thinking, card = response.split("|", 1)
         thinking = thinking.strip()
