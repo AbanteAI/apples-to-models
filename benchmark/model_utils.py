@@ -124,7 +124,9 @@ def get_completion_cost(client: OpenAI, completion_id: str) -> float:
     response = client.with_options(timeout=10.0).chat.completions.retrieve(
         completion_id=completion_id
     )
-    return float(response.usage.get("total_cost", 0.0))
+    if response.usage and hasattr(response.usage, "total_cost"):
+        return float(response.usage.total_cost or 0.0)
+    return 0.0
 
 
 @retry(tries=3, backoff=2)
