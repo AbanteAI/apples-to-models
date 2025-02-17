@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 import os
 from retry import retry
 import time
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -80,27 +79,38 @@ class ModelLogger:
         self.cost = cost
 
     def _write_log(self) -> None:
-        """Write the log file with all collected information."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file = self.log_dir / f"model_call_{timestamp}.log"
+        """Write the log file with all collected information in a human-readable format."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_file = self.log_dir / f"model_call_{timestamp.replace(':', '-')}.log"
 
         if not self.messages:
             raise ValueError("Messages not set before writing log")
 
-        log_data = {
-            "timestamp": timestamp,
-            "model": self.model,
-            "duration_seconds": self.end_time - self.start_time,
-            "cost": self.cost,
-            "messages": [
-                {"role": msg["role"], "content": msg.get("content", "") or ""}
-                for msg in self.messages.messages
-            ],
-            "response": self.response,
-        }
-
         with open(log_file, "w", encoding="utf-8") as f:
-            json.dump(log_data, f, indent=2, ensure_ascii=False)
+            # Write header information
+            f.write(f"Timestamp: {timestamp}\n")
+            f.write(f"Model: {self.model}\n")
+            f.write("-" * 80 + "\n\n")
+
+            # Write messages in a conversation format
+            f.write("=== Input Messages ===\n")
+            for msg in self.messages.messages:
+                role = msg["role"].upper()
+                content = msg.get("content", "") or ""
+                f.write(f"\n[{role}]\n{content}\n")
+            f.write("\n" + "-" * 80 + "\n")
+
+            # Write model response
+            f.write("\n=== Model Response ===\n")
+            f.write(f"{self.response}\n")
+            f.write("\n" + "-" * 80 + "\n")
+
+            # Write timing and cost information
+            f.write("\n=== Call Information ===\n")
+            duration = round(self.end_time - self.start_time, 3)
+            f.write(f"Duration: {duration} seconds\n")
+            if self.cost is not None:
+                f.write(f"Cost: ${self.cost:.4f}\n")
 
 
 @retry(tries=3, backoff=2)
