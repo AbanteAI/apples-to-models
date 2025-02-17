@@ -1,9 +1,17 @@
+import os
 from benchmark.model_utils import Messages, call_model
 from pathlib import Path
 
 
 def main():
     print("Starting model call example...")
+
+    # Check if API key is set
+    if not os.getenv("OPEN_ROUTER_KEY"):
+        print("\nError: OPEN_ROUTER_KEY environment variable is not set.")
+        print("Please set it with your OpenRouter API key:")
+        print("export OPEN_ROUTER_KEY='your-api-key-here'")
+        return
 
     # Create a Messages instance
     messages = Messages()
@@ -31,7 +39,7 @@ def main():
                         break
 
     except Exception as e:
-        print("Error calling model:", e)
+        print("\nError calling model:", e)
 
 
 if __name__ == "__main__":
