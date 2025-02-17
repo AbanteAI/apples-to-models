@@ -110,6 +110,23 @@ class ModelLogger:
             f.write("\n" + "-" * 80)
 
 
+def get_completion_cost(client: OpenAI, completion_id: str) -> float:
+    """
+    Get the cost of a completion from OpenRouter API.
+
+    Args:
+        client: The OpenAI client instance
+        completion_id: The ID of the completion to get the cost for
+
+    Returns:
+        The total cost of the completion
+    """
+    response = client.with_options(timeout=10.0).chat.completions.retrieve(
+        completion_id=completion_id
+    )
+    return float(response.usage.get("total_cost", 0.0))
+
+
 @retry(tries=3, backoff=2)
 def call_model(model: str, messages: Messages) -> str:
     """
@@ -142,7 +159,12 @@ def call_model(model: str, messages: Messages) -> str:
             raise ValueError("Model response content was None")
 
         logger.set_response(content)
-        # Cost calculation could be added here if the API provides it
-        # logger.set_cost(cost)
+
+        # Get the cost of the completion
+        try:
+            cost = get_completion_cost(client, response.id)
+            logger.set_cost(cost)
+        except Exception as e:
+            print(f"Warning: Failed to get completion cost: {e}")
 
         return content
