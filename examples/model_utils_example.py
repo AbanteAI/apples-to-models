@@ -1,7 +1,9 @@
+import asyncio
+
 from benchmark.model_utils import Messages, call_model
 
 
-def main():
+async def main():
     # Create a Messages instance
     messages = Messages()
 
@@ -10,7 +12,7 @@ def main():
 
     # Call the model
     try:
-        response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
+        response = await call_model("openai/gpt-4o-mini-2024-07-18", messages)
         print("\nModel Response Details:")
         print("-" * 40)
         print(f"Content: {response.content}")
@@ -23,4 +25,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
