@@ -100,7 +100,12 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                 messages.add_user(
                     create_player_prompt(pid, round.green_card, game.players[pid].hand)
                 )
-                messages.add_assistant(f"{move.thinking} | {move.played_card}")
+                if round.decision and move.played_card == round.decision.winning_card:
+                    messages.add_assistant(
+                        f"{move.thinking} | {move.played_card} (Winner)"
+                    )
+                else:
+                    messages.add_assistant(f"{move.thinking} | {move.played_card}")
             played_cards.append(move.played_card)
 
         # Show played cards to all players
