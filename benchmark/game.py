@@ -1,8 +1,9 @@
-from typing import List, Dict, Optional
-from pydantic import BaseModel, Field
-import random
 import json
+import random
 from pathlib import Path
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class Deck(BaseModel):

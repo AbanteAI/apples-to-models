@@ -1,4 +1,5 @@
 import pytest
+
 from benchmark.model_utils import Messages, call_model
 
 

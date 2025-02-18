@@ -1,8 +1,9 @@
 import argparse
 import random
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from datetime import datetime
+
 from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
@@ -242,9 +243,10 @@ def run_game(
     print(f"\nGame saved to: {save_path}")
 
     # Generate and open HTML report
-    from benchmark.game_report import save_html_report
-    import webbrowser
     import os
+    import webbrowser
+
+    from benchmark.game_report import save_html_report
 
     report_path = os.path.splitext(save_path)[0] + ".html"
     save_html_report(game, report_path)

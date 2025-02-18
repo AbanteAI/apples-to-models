@@ -1,19 +1,20 @@
-from typing import List, Iterator, Optional
-from openai import OpenAI
-from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
-    ChatCompletionAssistantMessageParam,
-)
-from pydantic import BaseModel
-from dotenv import load_dotenv
 import os
-from retry import retry
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Iterator, List, Optional
+
 import requests
+from dotenv import load_dotenv
+from openai import OpenAI
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+)
+from pydantic import BaseModel
+from retry import retry
 
 
 class ModelResponse(BaseModel):

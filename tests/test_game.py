@@ -1,7 +1,9 @@
-import pytest
-from benchmark.game import Game
 import tempfile
 from pathlib import Path
+
+import pytest
+
+from benchmark.game import Game
 
 
 def test_game_initialization():
