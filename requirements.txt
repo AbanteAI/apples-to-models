@@ -7,5 +7,4 @@ pytest>=7.0.0
 pytest-asyncio>=0.23.0
 termcolor>=2.0.0
 matplotlib>=3.8.0
-aiohttp[speedups]>=3.9.0
 httpx>=0.24.0
