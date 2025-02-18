@@ -217,10 +217,9 @@ async def run_game(
                 return None
 
             player = game.players[player_idx]
-            output_lines = [
-                (f"\n{player.name} (Player {player_idx})'s turn", "red"),
-                (f"Hand: {', '.join(player.hand)}", "red"),
-            ]
+            # Print all player output together
+            cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
+            cprint(f"Hand: {', '.join(player.hand)}", "red")
 
             if model == "random":
                 card, thinking, log_path = random_player_move(game, player_idx)
@@ -229,14 +228,10 @@ async def run_game(
                     game, player_idx, model
                 )
 
-            output_lines.extend(
-                [
-                    (f"Plays: {card}", "red"),
-                    (f"Thinking: {thinking}", "red"),
-                ]
-            )
+            cprint(f"Plays: {card}", "red")
+            cprint(f"Thinking: {thinking}", "red")
 
-            return player_idx, card, thinking, log_path, output_lines
+            return player_idx, card, thinking, log_path
 
         # Create tasks for all players
         tasks = [
@@ -247,13 +242,10 @@ async def run_game(
         # Run all tasks concurrently and collect results
         results = await asyncio.gather(*tasks)
 
-        # Process completed moves and print outputs in order
+        # Process completed moves
         for result in results:
             if result:  # Skip None results (judge's turn)
-                player_idx, card, thinking, log_path, output_lines = result
-                # Print the collected output for this player
-                for line, color in output_lines:
-                    cprint(line, color)
+                player_idx, card, thinking, log_path = result
                 game.play_card(player_idx, card, thinking)
                 if log_path and player_idx in game.rounds[-1].moves:
                     game.rounds[-1].moves[player_idx].log_path = log_path
