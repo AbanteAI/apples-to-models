@@ -3,15 +3,13 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from benchmark.game import Game, PlayerMove, Round
 from benchmark.model_utils import ModelResponse
 from benchmark.run import create_parser, main, model_judge_move, run_game, validate_args
-
-pytestmark = pytest.mark.asyncio
 
 
 def test_argument_validation():
@@ -55,7 +53,8 @@ def test_argument_validation():
         validate_args(args)
 
 
-@patch("benchmark.model_utils.call_model")
+@pytest.mark.asyncio
+@patch("benchmark.model_utils.call_model", new_callable=AsyncMock)
 async def test_run_game(mock_call_model):
     # Mock model responses
     mock_response = ModelResponse(
@@ -113,6 +112,7 @@ async def test_run_game(mock_call_model):
         Path(f.name).unlink()
 
 
+@pytest.mark.asyncio
 async def test_main_success(capsys):
     # Test successful run with output capture
     test_args = [
@@ -132,6 +132,7 @@ async def test_main_success(capsys):
         assert "wins" in captured.out
 
 
+@pytest.mark.asyncio
 async def test_main_error(capsys):
     # Test error handling in main
     test_args = [
@@ -150,6 +151,7 @@ async def test_main_error(capsys):
         assert "Error:" in captured.out
 
 
+@pytest.mark.asyncio
 async def test_benchmark_command(capsys):
     """Test that the benchmark runs successfully with the example command"""
     test_args = [
@@ -189,7 +191,8 @@ def test_normalize_card_name():
     assert normalize_card_name("QuEeN eLiZaBeTh") == "queenelizabeth"
 
 
-def test_judge_move_with_exact_cards():
+@pytest.mark.asyncio
+async def test_judge_move_with_exact_cards():
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
     game = Game.new_game(["Player 1", "Player 2", "Player 3"])
@@ -213,7 +216,7 @@ def test_judge_move_with_exact_cards():
     game.rounds = [round]
 
     # Test case 1: Model responds with proper format
-    with patch("benchmark.model_utils.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="After careful consideration | Queen Elizabeth",
             tokens_prompt=10,
@@ -223,13 +226,13 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
         assert log_path == Path("tests/test.log")
 
     # Test case 2: Model responds with proper format and punctuation
-    with patch("benchmark.model_utils.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="She's very graceful! | Queen Elizabeth.",
             tokens_prompt=10,
@@ -239,13 +242,13 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
         assert log_path == Path("tests/test.log")
 
     # Test case 3: Model responds with proper format and different case
-    with patch("benchmark.model_utils.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="Most graceful choice | QUEEN ELIZABETH",
             tokens_prompt=10,
@@ -255,13 +258,13 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "Most graceful choice"
         assert log_path == Path("tests/test.log")
 
     # Test case 4: Model responds without separator
-    with patch("benchmark.model_utils.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="Queen Elizabeth is the most graceful choice",
             tokens_prompt=10,
@@ -271,13 +274,13 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
         assert log_path is None  # Random selection has no log
 
     # Test case 5: Model responds with multiple separators
-    with patch("benchmark.model_utils.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="First | Second | Third",
             tokens_prompt=10,
@@ -287,13 +290,13 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
         assert log_path is None  # Random selection has no log
 
     # Test case 6: Model responds with invalid card
-    with patch("benchmark.model_utils.call_model") as mock_call:
+    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="This is graceful | The Moon",
             tokens_prompt=10,
@@ -303,7 +306,7 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
         assert log_path is None  # Random selection has no log

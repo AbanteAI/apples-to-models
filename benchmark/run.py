@@ -87,7 +87,7 @@ def normalize_card_name(card: str) -> str:
     return "".join(c.lower() for c in card if c.isalpha())
 
 
-def model_player_move(
+async def model_player_move(
     game: Game, player_idx: int, model: str
 ) -> tuple[str, str, Optional[Path]]:
     """Make a model-based move for the given player"""
@@ -100,8 +100,8 @@ def model_player_move(
 
     try:
         messages = create_player_messages(game, player_idx, green_card, player.hand)
-        response = call_model(model, messages)
-        thinking, card = response.content.split("|", 1)
+        model_response = await call_model(model, messages)
+        thinking, card = model_response.content.split("|", 1)
         thinking = thinking.strip()
 
         # Normalize the chosen card and player's hand
@@ -114,7 +114,7 @@ def model_player_move(
         else:
             raise ValueError(f"Model chose card '{card}' which is not in player's hand")
 
-        return card, thinking, response.log_path
+        return card, thinking, model_response.log_path
     except Exception as e:
         # Fallback to random selection if model fails
         print(
@@ -124,7 +124,7 @@ def model_player_move(
         return card, thinking, None
 
 
-def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
+async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
     """Make a model-based judging decision"""
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_judge_messages
@@ -134,17 +134,17 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
     played_cards = [move.played_card for move in moves.values()]
     messages = create_judge_messages(game, round.judge)
 
-    response = None
+    model_response = None
     try:
-        response = call_model(model, messages)
+        model_response = await call_model(model, messages)
         try:
             # Require exactly one separator
-            if response.content.count("|") != 1:
+            if model_response.content.count("|") != 1:
                 raise ValueError(
-                    f"Response must contain exactly one '|' separator: {response.content}"
+                    f"Response must contain exactly one '|' separator: {model_response.content}"
                 )
 
-            thinking, card = response.content.split("|", 1)
+            thinking, card = model_response.content.split("|", 1)
             thinking = thinking.strip()
             card = card.strip()
 
@@ -159,10 +159,12 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
                     f"Could not find matching card '{card}' among played cards: {played_cards}"
                 )
 
-            return card, thinking, response.log_path
+            return card, thinking, model_response.log_path
         except Exception as e:
             # Print raw response only when there's an error parsing it
-            print(f"\nError parsing judge response. Raw response was: {response}")
+            print(
+                f"\nError parsing judge response. Raw response was: {model_response.content}"
+            )
             raise e
     except Exception as e:
         # Fallback to random selection if model fails
@@ -221,7 +223,9 @@ async def run_game(
             if model == "random":
                 card, thinking, log_path = random_player_move(game, player_idx)
             else:
-                card, thinking, log_path = model_player_move(game, player_idx, model)
+                card, thinking, log_path = await model_player_move(
+                    game, player_idx, model
+                )
 
             cprint(f"Plays: {card}", "red")
             cprint(f"Thinking: {thinking}", "red")
@@ -272,7 +276,7 @@ async def run_game(
                     )
                     break
         else:
-            winning_card, thinking, log_path = model_judge_move(game, judge_model)
+            winning_card, thinking, log_path = await model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
             # Create a new decision with the log path
             if game.rounds[-1].decision:

@@ -18,10 +18,11 @@ def test_messages_add_user():
 
 
 @pytest.mark.skip(reason="Requires API key and network access")
-def test_call_model():
+@pytest.mark.asyncio
+async def test_call_model():
     messages = Messages()
     messages.add_user("What is 2 + 2?")
-    response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
+    response = await call_model("openai/gpt-4o-mini-2024-07-18", messages)
 
     # Check response structure
     assert isinstance(response.content, str)

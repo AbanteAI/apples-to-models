@@ -10,11 +10,11 @@ requires-python = ">=3.11"
 dependencies = [
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",
-    "retry>=0.9.2",
     "pydantic>=2.0.0",
     "pytest>=7.0.0",
     "termcolor>=2.0.0",
-    "requests>=2.31.0",
+    "httpx>=0.24.0",
+    "aiohttp[speedups]>=3.9.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -26,3 +26,16 @@ extend-select = ["I"]
 
 [tool.ruff.isort]
 combine-as-imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.pyright]
+include = ["benchmark", "tests"]
+extraPaths = ["."]
+venvPath = "."
+venv = ".venv"
+reportMissingImports = true
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+useLibraryCodeForTypes = true
