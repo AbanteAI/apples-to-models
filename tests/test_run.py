@@ -1,3 +1,4 @@
+import asyncio
 import json
 import sys
 import tempfile
@@ -9,6 +10,8 @@ import pytest
 from benchmark.game import Game, PlayerMove, Round
 from benchmark.model_utils import ModelResponse
 from benchmark.run import create_parser, main, model_judge_move, run_game, validate_args
+
+pytestmark = pytest.mark.asyncio
 
 
 def test_argument_validation():
@@ -53,7 +56,7 @@ def test_argument_validation():
 
 
 @patch("benchmark.model_utils.call_model")
-def test_run_game(mock_call_model):
+async def test_run_game(mock_call_model):
     # Mock model responses
     mock_response = ModelResponse(
         content="Test Card|Because it matches",
@@ -65,7 +68,7 @@ def test_run_game(mock_call_model):
     mock_call_model.return_value = mock_response
 
     # Test new game with random models
-    game = run_game(num_rounds=3, num_players=2, models=["random", "random"])
+    game = await run_game(num_rounds=3, num_players=2, models=["random", "random"])
     assert len(game.rounds) == 3
     assert len(game.players) == 2
     assert all(len(player.won_rounds) > 0 for player in game.players.values())
@@ -73,7 +76,7 @@ def test_run_game(mock_call_model):
 
     # Test game with real model
     mock_call_model.reset_mock()
-    game = run_game(num_rounds=2, num_players=2, models=["random", "gpt-4"])
+    game = await run_game(num_rounds=2, num_players=2, models=["random", "gpt-4"])
     assert len(game.rounds) == 2
     assert len(game.players) == 2
     # Should have model calls for the gpt-4 player's moves and when they judge
@@ -81,7 +84,7 @@ def test_run_game(mock_call_model):
 
     # Test save and load game
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        game = run_game(
+        game = await run_game(
             num_rounds=2, num_players=3, models=["random"] * 3, save_game_path=f.name
         )
 
@@ -93,7 +96,7 @@ def test_run_game(mock_call_model):
             assert len(saved_data["rounds"]) == 2
 
         # Test loading and continuing
-        continued_game = run_game(
+        continued_game = await run_game(
             num_rounds=4,  # Continue for 2 more rounds
             num_players=3,
             models=["random"] * 3,
@@ -105,7 +108,7 @@ def test_run_game(mock_call_model):
         Path(f.name).unlink()
 
 
-def test_main_success(capsys):
+async def test_main_success(capsys):
     # Test successful run with output capture
     test_args = [
         "benchmark.run",
@@ -118,7 +121,7 @@ def test_main_success(capsys):
         "random",
     ]
     with patch.object(sys, "argv", test_args):
-        main()
+        await asyncio.get_event_loop().run_in_executor(None, main)
         captured = capsys.readouterr()
         assert "Game completed!" in captured.out
         assert "wins" in captured.out
@@ -142,7 +145,7 @@ def test_main_error(capsys):
         assert "Error:" in captured.out
 
 
-def test_benchmark_command(capsys):
+async def test_benchmark_command(capsys):
     """Test that the benchmark runs successfully with the example command"""
     test_args = [
         "benchmark.run",
@@ -156,7 +159,7 @@ def test_benchmark_command(capsys):
         "random",
     ]
     with patch.object(sys, "argv", test_args):
-        main()
+        await asyncio.get_event_loop().run_in_executor(None, main)
         captured = capsys.readouterr()
         assert "Game completed!" in captured.out
         assert "Final scores:" in captured.out
