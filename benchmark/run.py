@@ -186,21 +186,49 @@ def run_game(
         )
         cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
-        # Have non-judge players make moves
-        for player_idx in range(num_players):
-            if player_idx != round.judge:
-                model = models[player_idx]
-                player = game.players[player_idx]
+        # Have non-judge players make moves in parallel
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        # Lock for thread-safe printing
+        print_lock = threading.Lock()
+
+        def process_player_move(player_idx, model):
+            if player_idx == round.judge:
+                return None
+
+            player = game.players[player_idx]
+            with print_lock:
                 cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
                 cprint(f"Hand: {', '.join(player.hand)}", "red")
 
-                if model == "random":
-                    card, thinking = random_player_move(game, player_idx)
-                else:
-                    card, thinking = model_player_move(game, player_idx, model)
-                game.play_card(player_idx, card, thinking)
+            if model == "random":
+                card, thinking = random_player_move(game, player_idx)
+            else:
+                card, thinking = model_player_move(game, player_idx, model)
+
+            with print_lock:
                 cprint(f"Plays: {card}", "red")
                 cprint(f"Thinking: {thinking}", "red")
+
+            return player_idx, card, thinking
+
+        # Create a thread pool and submit tasks for each non-judge player
+        with ThreadPoolExecutor() as executor:
+            # Submit tasks for all players (non-judge players will be processed)
+            future_to_player = {
+                executor.submit(
+                    process_player_move, player_idx, models[player_idx]
+                ): player_idx
+                for player_idx in range(num_players)
+            }
+
+            # Process completed moves
+            for future in as_completed(future_to_player):
+                result = future.result()
+                if result:  # Skip None results (judge's turn)
+                    player_idx, card, thinking = result
+                    game.play_card(player_idx, card, thinking)
 
         # Judge selects a winner
         judge_model = models[round.judge]
