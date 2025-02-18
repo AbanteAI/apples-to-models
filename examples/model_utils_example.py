@@ -62,15 +62,22 @@ def demonstrate_different_formatters():
     text_dir = log_base / "text"
     json_dir = log_base / "json"
 
-    # Create loggers with different formatters
-    text_logger = ModelLogger(log_dir=str(text_dir))
-    json_logger = ModelLogger(log_dir=str(json_dir), formatter=JsonFormatter())
-
     messages = Messages()
     messages.add_user("What is the capital of France?")
 
     try:
-        response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
+        # First call with text formatter
+        print("\nMaking API call with text formatter...")
+        ModelLogger(log_dir=str(text_dir)).log(
+            ModelCall("openai/gpt-4o-mini-2024-07-18", messages)
+        )
+
+        # Second call with JSON formatter
+        print("Making API call with JSON formatter...")
+        ModelLogger(log_dir=str(json_dir), formatter=JsonFormatter()).log(
+            ModelCall("openai/gpt-4o-mini-2024-07-18", messages)
+        )
+
         print("\nLogs have been written to:")
         print(f"Text format: {text_dir}")
         print(f"JSON format: {json_dir}")
