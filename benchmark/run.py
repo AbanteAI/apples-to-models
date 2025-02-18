@@ -1,5 +1,7 @@
 import argparse
+import os
 import random
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -7,16 +9,26 @@ from typing import List, Optional
 from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
+from benchmark.game_report import save_html_report
 
 # Create games directory if it doesn't exist
 GAMES_DIR = Path(__file__).parent / "games"
 GAMES_DIR.mkdir(exist_ok=True)
 
 
-def get_default_save_path() -> Path:
-    """Generate a default save path with timestamp"""
+def create_game_directory() -> tuple[Path, str]:
+    """Create a new directory for this game's files and return its path and timestamp"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return GAMES_DIR / f"game_{timestamp}.json"
+    game_dir = GAMES_DIR / timestamp
+    game_dir.mkdir(exist_ok=True)
+    return game_dir, timestamp
+
+
+def get_default_save_paths(game_dir: Path, timestamp: str) -> tuple[Path, Path]:
+    """Generate default save paths for game state and report"""
+    state_path = game_dir / "game_state.json"
+    report_path = game_dir / "game_report.html"
+    return state_path, report_path
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -163,6 +175,13 @@ def run_game(
     save_game_path: Optional[str] = None,
 ) -> Game:
     """Run a game with the specified configuration"""
+    # Create game directory and get paths
+    game_dir, timestamp = create_game_directory()
+    state_path, report_path = get_default_save_paths(game_dir, timestamp)
+
+    # Set up model logging directory
+    os.environ["GAME_LOG_DIR"] = str(game_dir / "model_logs")
+
     # Load or create new game
     if load_game_path:
         game = Game.load_game(load_game_path)
@@ -237,23 +256,22 @@ def run_game(
                     cprint(f"Reasoning: {thinking}", "green")
                     break
 
-    # Save game (use default path if none specified)
-    save_path = save_game_path if save_game_path else str(get_default_save_path())
-    game.save_game(save_path)
-    print(f"\nGame saved to: {save_path}")
+    # Save game state
+    final_state_path = save_game_path if save_game_path else str(state_path)
+    game.save_game(final_state_path)
+    print(f"\nGame state saved to: {final_state_path}")
 
-    # Generate and open HTML report
-    import os
-    import webbrowser
-
-    from benchmark.game_report import save_html_report
-
-    report_path = os.path.splitext(save_path)[0] + ".html"
-    save_html_report(game, report_path)
-    print(f"Game report saved to: {report_path}")
+    # Generate and save HTML report
+    final_report_path = (
+        os.path.splitext(final_state_path)[0] + ".html"
+        if save_game_path
+        else str(report_path)
+    )
+    save_html_report(game, final_report_path)
+    print(f"Game report saved to: {final_report_path}")
 
     # Open the report in the default web browser
-    webbrowser.open(f"file://{os.path.abspath(report_path)}")
+    webbrowser.open(f"file://{os.path.abspath(final_report_path)}")
 
     return game
 

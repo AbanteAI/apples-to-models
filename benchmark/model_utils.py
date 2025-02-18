@@ -69,8 +69,9 @@ class Messages:
 class ModelLogger:
     """Class to handle logging of model calls using a context manager."""
 
-    def __init__(self, log_dir: str = "benchmark/logs"):
-        self.log_dir = Path(log_dir)
+    def __init__(self, log_dir: Optional[str] = None):
+        # Use game-specific log directory if set in environment, otherwise use default
+        self.log_dir = Path(log_dir or os.getenv("GAME_LOG_DIR", "benchmark/logs"))
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.start_time: float = 0
         self.end_time: float = 0
@@ -78,6 +79,7 @@ class ModelLogger:
         self.messages: Optional[Messages] = None
         self.response: Optional[str] = None
         self.cost: Optional[float] = None
+        self._log_counter: int = 0
 
     def __enter__(self):
         self.start_time = time.time()
@@ -103,8 +105,9 @@ class ModelLogger:
 
     def _write_log(self) -> None:
         """Write the log file with all collected information in a human-readable format."""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_file = self.log_dir / f"model_call_{timestamp.replace(':', '-')}.log"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._log_counter += 1
+        log_file = self.log_dir / f"model_call_{self._log_counter:03d}_{timestamp}.log"
 
         if not self.messages:
             raise ValueError("Messages not set before writing log")
