@@ -4,11 +4,13 @@
         "tests"
     ],
     "extraPaths": [
-        "."
+        ".",
+        "benchmark/stubs"
     ],
     "venvPath": ".",
     "venv": ".venv",
     "reportMissingImports": true,
     "pythonVersion": "3.11",
-    "typeCheckingMode": "basic"
+    "typeCheckingMode": "basic",
+    "stubPath": "benchmark/stubs"
 }
