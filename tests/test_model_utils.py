@@ -41,8 +41,9 @@ def test_messages_add_assistant():
     test_message = "Assistant response"
     messages.add_assistant(test_message)
     assert len(messages.messages) == 1
-    assert messages.messages[0]["role"] == "assistant"
-    assert messages.messages[0]["content"] == test_message
+    msg = messages.messages[0]
+    assert msg["role"] == "assistant"
+    assert msg.get("content") == test_message  # Use get() for optional fields
 
 
 def test_model_call_creation():
