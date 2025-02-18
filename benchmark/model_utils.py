@@ -175,6 +175,7 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         messages=list(messages),  # Convert Messages instance to list
         temperature=0,
     )
+    duration = time.time() - start_time  # Calculate duration right after completion
 
     content = response.choices[0].message.content
     if content is None:
@@ -185,7 +186,6 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
 
     # Fetch generation stats
     stats = await get_generation_stats(generation_id, api_key)
-    duration = time.time() - start_time
 
     # Write log file
     log_path = write_model_log(
