@@ -6,12 +6,24 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
 )
+from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 from retry import retry
 import time
 from datetime import datetime
 from pathlib import Path
+import requests
+
+
+class ModelResponse(BaseModel):
+    """Response data from a model call including content and usage statistics."""
+
+    content: str
+    tokens_prompt: int
+    tokens_completion: int
+    total_cost: float
+    generation_id: str
 
 
 class Messages:
@@ -111,7 +123,7 @@ class ModelLogger:
 
 
 @retry(tries=3, backoff=2)
-def call_model(model: str, messages: Messages) -> str:
+def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
 
@@ -120,17 +132,17 @@ def call_model(model: str, messages: Messages) -> str:
         messages: A Messages instance containing the conversation
 
     Returns:
-        The model's response content as a string
+        A ModelResponse object containing the response content and usage statistics
     """
     load_dotenv()  # Load environment variables
+    api_key = os.getenv("OPEN_ROUTER_KEY")
 
-    client = OpenAI(
-        api_key=os.getenv("OPEN_ROUTER_KEY"), base_url="https://openrouter.ai/api/v1"
-    )
+    client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
 
     with ModelLogger() as logger:
         logger.set_model_info(model, messages)
 
+        # Make the initial completion request
         response = client.chat.completions.create(
             model=model,
             messages=list(messages),  # Convert Messages instance to list
@@ -141,8 +153,44 @@ def call_model(model: str, messages: Messages) -> str:
         if content is None:
             raise ValueError("Model response content was None")
 
-        logger.set_response(content)
-        # Cost calculation could be added here if the API provides it
-        # logger.set_cost(cost)
+        # Get the generation ID from the response
+        generation_id = response.id
 
-        return content
+        # Fetch generation stats
+        headers = {"Authorization": f"Bearer {api_key}"}
+        stats_response = requests.get(
+            f"https://openrouter.ai/api/v1/generation?id={generation_id}",
+            headers=headers,
+        )
+
+        # Debug logging
+        print(f"Generation stats response: {stats_response.status_code}")
+        print(f"Response content: {stats_response.text}")
+
+        stats_data = stats_response.json()
+        if "data" not in stats_data:
+            # If stats are not available, return with default values
+            model_response = ModelResponse(
+                content=content,
+                tokens_prompt=0,  # Will update when stats are available
+                tokens_completion=0,  # Will update when stats are available
+                total_cost=0.0,  # Will update when stats are available
+                generation_id=generation_id,
+            )
+        else:
+            stats = stats_data["data"]
+            model_response = ModelResponse(
+                content=content,
+                tokens_prompt=stats["tokens_prompt"],
+                tokens_completion=stats["tokens_completion"],
+                total_cost=stats["total_cost"],
+                generation_id=generation_id,
+            )
+
+        logger.set_response(content)
+        if "data" in stats_data:
+            logger.set_cost(stats_data["data"]["total_cost"])
+        else:
+            logger.set_cost(0.0)
+
+        return model_response
