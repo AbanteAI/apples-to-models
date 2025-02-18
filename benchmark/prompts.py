@@ -34,21 +34,24 @@ def create_player_messages(
         # Show played cards and thinking
         for pid, move in round.moves.items():
             if pid == player_idx:
-                # Show player their own thinking
-                messages.add_assistant(
-                    f"Player {pid + 1} (You) played: {move.played_card}\n"
-                    f"Your thinking: {move.thinking}"
-                )
+                # Show player their own thinking in the reasoning | card format
+                messages.add_assistant(f"{move.thinking} | {move.played_card}")
             else:
                 # Only show the card played by others, not their thinking
                 messages.add_user(f"Player {pid + 1} played: {move.played_card}")
 
         # Show judge's decision and reasoning (visible to all)
         if round.decision:
-            messages.add_user(
-                f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
-                f"Their reasoning: {round.decision.reasoning}"
-            )
+            if round.judge == player_idx:
+                messages.add_user(
+                    f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
+                    f"Your reasoning: {round.decision.reasoning}"
+                )
+            else:
+                messages.add_user(
+                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
+                    f"Their reasoning: {round.decision.reasoning}"
+                )
 
     messages.add_user(
         f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
@@ -88,10 +91,8 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
         # Show played cards and thinking
         for player_idx, move in round.moves.items():
             if player_idx == judge_idx:
-                messages.add_assistant(
-                    f"Player {player_idx + 1} (You) played: {move.played_card}\n"
-                    f"Your thinking: {move.thinking}"
-                )
+                # Show judge's own thinking in the reasoning | card format
+                messages.add_assistant(f"{move.thinking} | {move.played_card}")
             else:
                 messages.add_user(
                     f"Player {player_idx + 1} played: {move.played_card}\n"
@@ -102,8 +103,7 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
         if round.decision:
             if round.judge == judge_idx:
                 messages.add_assistant(
-                    f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
-                    f"Your reasoning: {round.decision.reasoning}"
+                    f"{round.decision.reasoning} | {round.decision.winning_card}"
                 )
             else:
                 messages.add_user(
