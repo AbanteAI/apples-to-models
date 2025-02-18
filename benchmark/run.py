@@ -1,6 +1,7 @@
 import argparse
 import os
 import random
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -8,6 +9,7 @@ from typing import List, Optional
 from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
+from benchmark.game_report import save_html_report
 
 # Create games directory if it doesn't exist
 GAMES_DIR = Path(__file__).parent / "games"
@@ -260,11 +262,6 @@ def run_game(
     print(f"\nGame state saved to: {final_state_path}")
 
     # Generate and save HTML report
-    import os
-    import webbrowser
-
-    from benchmark.game_report import save_html_report
-
     final_report_path = (
         os.path.splitext(final_state_path)[0] + ".html"
         if save_game_path
