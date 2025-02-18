@@ -106,7 +106,6 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         # Show played cards to all players
         if round.decision:
             # For completed rounds, show anonymous cards except for the winner
-            winning_player = round.decision.winning_player
             winning_card = round.decision.winning_card
             for pid, move in round.moves.items():
                 if pid != player_idx:  # Don't repeat current player's move
