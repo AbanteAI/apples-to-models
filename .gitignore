@@ -1,5 +1,6 @@
 .env
 __pycache__/
 venv/
-.venv/*.egg-info/
+.venv/
+*.egg-info/
 benchmark/logs/
