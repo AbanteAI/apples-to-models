@@ -101,10 +101,16 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     create_player_prompt(pid, round.green_card, game.players[pid].hand)
                 )
                 messages.add_assistant(f"{move.thinking} | {move.played_card}")
+            elif round.decision and (is_judge or player_idx == round.judge):
+                # Show other players' moves and thinking for completed rounds to judges
+                messages.add_user(
+                    f"Player {pid + 1} played: {move.played_card}\n"
+                    f"Their thinking: {move.thinking}"
+                )
             played_cards.append(move.played_card)
 
-        # Show all played cards without revealing who played them
-        if player_idx != round.judge:
+        # Show all played cards without revealing who played them for non-judges in current round
+        if player_idx != round.judge and not round.decision:
             messages.add_user(
                 f"The played red cards are:\n{format_cards_list(played_cards)}"
             )
