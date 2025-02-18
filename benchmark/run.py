@@ -159,12 +159,7 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
                     f"Could not find matching card '{card}' among played cards: {played_cards}"
                 )
 
-            # Update the decision with the actual log path
-            round = game.rounds[-1]
-            if round.decision:
-                round.decision.log_path = response.log_path
-
-            return card, thinking
+            return card, thinking, response.log_path
         except Exception as e:
             # Print raw response only when there's an error parsing it
             print(f"\nError parsing judge response. Raw response was: {response}")
@@ -256,12 +251,17 @@ async def run_game(
         cprint("\nJudge's Decision:", "green")
         if judge_model == "random":
             winning_move = random.choice(list(round.moves.values()))
-            winning_card, thinking, _ = (
-                winning_move.played_card,
-                "Random selection",
-                None,
-            )
+            winning_card = winning_move.played_card
+            thinking = "Random selection"
             game.judge_round(winning_card, thinking)
+            # Create a new decision with the no_log path
+            if game.rounds[-1].decision:
+                game.rounds[-1].decision = JudgeDecision(
+                    winning_card=winning_card,
+                    winning_player=game.rounds[-1].decision.winning_player,
+                    reasoning=thinking,
+                    log_path=Path("benchmark/logs/no_log.txt"),
+                )
             cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in round.moves.items():
@@ -275,8 +275,16 @@ async def run_game(
         else:
             winning_card, thinking, log_path = model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
-            if log_path and game.rounds[-1].decision:
-                game.rounds[-1].decision.log_path = log_path
+            # Create a new decision with the log path
+            if game.rounds[-1].decision:
+                game.rounds[-1].decision = JudgeDecision(
+                    winning_card=winning_card,
+                    winning_player=game.rounds[-1].decision.winning_player,
+                    reasoning=thinking,
+                    log_path=log_path
+                    if log_path
+                    else Path("benchmark/logs/no_log.txt"),
+                )
             cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in round.moves.items():

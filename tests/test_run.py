@@ -223,9 +223,10 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
+        assert log_path == Path("tests/test.log")
 
     # Test case 2: Model responds with proper format and punctuation
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -238,9 +239,10 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
+        assert log_path == Path("tests/test.log")
 
     # Test case 3: Model responds with proper format and different case
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -253,9 +255,10 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "Most graceful choice"
+        assert log_path == Path("tests/test.log")
 
     # Test case 4: Model responds without separator
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -268,9 +271,10 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
+        assert log_path is None  # Random selection has no log
 
     # Test case 5: Model responds with multiple separators
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -283,9 +287,10 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
+        assert log_path is None  # Random selection has no log
 
     # Test case 6: Model responds with invalid card
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -298,6 +303,7 @@ def test_judge_move_with_exact_cards():
             log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
+        assert log_path is None  # Random selection has no log
