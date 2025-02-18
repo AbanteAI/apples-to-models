@@ -25,6 +25,7 @@ class ModelResponse(BaseModel):
     tokens_completion: int
     total_cost: float
     generation_id: str
+    log_path: Optional[Path] = None
 
     def __str__(self) -> str:
         """Return a human-readable string representation."""
@@ -33,7 +34,8 @@ class ModelResponse(BaseModel):
             f"tokens_prompt={self.tokens_prompt}, "
             f"tokens_completion={self.tokens_completion}, "
             f"total_cost=${self.total_cost:.6f}, "
-            f"generation_id='{self.generation_id}')"
+            f"generation_id='{self.generation_id}', "
+            f"log_path='{self.log_path}')"
         )
 
 
@@ -88,7 +90,7 @@ class ModelLogger:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.end_time = time.time()
         if self.model and self.messages and self.response is not None:
-            self._write_log()
+            return self._write_log()
 
     def set_model_info(self, model: str, messages: Messages):
         """Set the model and messages information."""
@@ -103,8 +105,12 @@ class ModelLogger:
         """Set the cost of the model call (optional)."""
         self.cost = cost
 
-    def _write_log(self) -> None:
-        """Write the log file with all collected information in a human-readable format."""
+    def _write_log(self) -> Path:
+        """Write the log file with all collected information in a human-readable format.
+
+        Returns:
+            Path: The path to the written log file
+        """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._log_counter += 1
         log_file = self.log_dir / f"model_call_{self._log_counter:03d}_{timestamp}.log"
@@ -134,6 +140,8 @@ class ModelLogger:
             f.write("\n=== Model Response ===\n")
             f.write(f"{self.response}\n")
             f.write("\n" + "-" * 80)
+
+        return log_file
 
 
 @retry(tries=8, delay=0.1, backoff=2)
@@ -209,5 +217,9 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
 
         logger.set_response(content)
         logger.set_cost(stats["total_cost"])
+
+        # Get the log path from the logger
+        log_path = logger._write_log()
+        model_response.log_path = log_path
 
         return model_response

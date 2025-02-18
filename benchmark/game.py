@@ -1,7 +1,7 @@
 import json
 import random
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -44,6 +44,7 @@ class PlayerMove(BaseModel):
     played_card: str
     thinking: str  # Private reasoning for the move
     drawn_card: str  # Card drawn to replace the played card
+    log_path: Optional[Union[str, Path]] = None  # Path to the model call log
 
 
 class JudgeDecision(BaseModel):
@@ -52,6 +53,7 @@ class JudgeDecision(BaseModel):
     winning_card: str
     winning_player: int
     reasoning: str  # Public reasoning for the decision
+    log_path: Optional[Union[str, Path]] = None  # Path to the model call log
 
 
 class Round(BaseModel):
