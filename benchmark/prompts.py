@@ -95,8 +95,8 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         # Show played cards and thinking
         played_cards = []
         for pid, move in round.moves.items():
-            if pid == player_idx and not round.decision:
-                # Show the player's own move and thinking only for the current round
+            if pid == player_idx:
+                # Always show the player's own move and thinking
                 messages.add_user(
                     create_player_prompt(pid, round.green_card, game.players[pid].hand)
                 )
@@ -105,7 +105,7 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
 
         # Show played cards to all players
         if round.decision:
-            # For completed rounds, show who played what
+            # For completed rounds, show who played what (except own move which was shown above)
             for pid, move in round.moves.items():
                 if pid != player_idx:  # Don't repeat own move
                     messages.add_user(f"Player {pid + 1} played: {move.played_card}")
