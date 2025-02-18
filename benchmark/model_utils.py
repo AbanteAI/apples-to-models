@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional
 
-import aiohttp
+import aiohttp  # type: ignore
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from openai.types.chat import (
