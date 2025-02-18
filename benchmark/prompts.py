@@ -121,7 +121,7 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     else:
                         messages.add_user(f"Someone played: {move.played_card}")
         # For current round, show anonymous list to non-judges
-        elif player_idx != round.judge:
+        elif round == game.rounds[-1] and player_idx != round.judge:
             messages.add_user(
                 f"The played red cards are:\n{format_cards_list(played_cards)}"
             )
