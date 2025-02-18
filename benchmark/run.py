@@ -217,9 +217,6 @@ async def run_game(
                 return None
 
             player = game.players[player_idx]
-            # Print all player output together
-            cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
-            cprint(f"Hand: {', '.join(player.hand)}", "red")
 
             if model == "random":
                 card, thinking, log_path = random_player_move(game, player_idx)
@@ -228,6 +225,9 @@ async def run_game(
                     game, player_idx, model
                 )
 
+            # Print all player output together after the model call
+            cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
+            cprint(f"Hand: {', '.join(player.hand)}", "red")
             cprint(f"Plays: {card}", "red")
             cprint(f"Thinking: {thinking}", "red")
 
