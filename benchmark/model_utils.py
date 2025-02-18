@@ -1,12 +1,14 @@
+import asyncio
 import os
 import time
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Iterator, List, Optional
 
-import requests
+import aiohttp
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam,
@@ -14,7 +16,29 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 from pydantic import BaseModel
-from retry import retry
+
+
+def async_retry(tries=8, delay=0.1, backoff=2):
+    """Retry decorator for async functions"""
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            _tries, _delay = tries, delay
+            while _tries > 0:
+                try:
+                    return await func(*args, **kwargs)
+                except Exception:
+                    _tries -= 1
+                    if _tries == 0:
+                        raise
+                    await asyncio.sleep(_delay)
+                    _delay *= backoff
+            return None
+
+        return wrapper
+
+    return decorator
 
 
 class ModelResponse(BaseModel):
@@ -144,8 +168,8 @@ class ModelLogger:
         return log_file
 
 
-@retry(tries=8, delay=0.1, backoff=2)
-def get_generation_stats(generation_id: str, api_key: str) -> dict:
+@async_retry(tries=8, delay=0.1, backoff=2)
+async def get_generation_stats(generation_id: str, api_key: str) -> dict:
     """
     Fetch generation statistics from OpenRouter API with retry logic.
 
@@ -157,20 +181,22 @@ def get_generation_stats(generation_id: str, api_key: str) -> dict:
         Dictionary containing the generation statistics
     """
     headers = {"Authorization": f"Bearer {api_key}"}
-    stats_response = requests.get(
-        f"https://openrouter.ai/api/v1/generation?id={generation_id}",
-        headers=headers,
-    )
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"https://openrouter.ai/api/v1/generation?id={generation_id}",
+            headers=headers,
+        ) as response:
+            stats_data = await response.json()
+            if "data" not in stats_data:
+                raise ValueError(
+                    f"Stats data not available in response: {await response.text()}"
+                )
 
-    stats_data = stats_response.json()
-    if "data" not in stats_data:
-        raise ValueError(f"Stats data not available in response: {stats_response.text}")
-
-    return stats_data["data"]
+            return stats_data["data"]
 
 
-@retry(tries=5, delay=0.1, backoff=2)
-def call_model(model: str, messages: Messages) -> ModelResponse:
+@async_retry(tries=5, delay=0.1, backoff=2)
+async def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
 
@@ -186,13 +212,13 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
     if not api_key:
         raise ValueError("OPEN_ROUTER_KEY environment variable is not set")
 
-    client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
 
     with ModelLogger() as logger:
         logger.set_model_info(model, messages)
 
         # Make the initial completion request
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=model,
             messages=list(messages),  # Convert Messages instance to list
             temperature=0,
@@ -206,7 +232,7 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
         generation_id = response.id
 
         # Fetch generation stats
-        stats = get_generation_stats(generation_id, api_key)
+        stats = await get_generation_stats(generation_id, api_key)
         model_response = ModelResponse(
             content=content,
             tokens_prompt=stats["tokens_prompt"],
