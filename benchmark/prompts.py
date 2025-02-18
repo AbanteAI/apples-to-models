@@ -26,9 +26,6 @@ def create_system_message(total_players: int, player_number: int) -> str:
     )
 
 
-SYSTEM_MESSAGE = create_system_message(1, 1)  # Default values, will be updated per game
-
-
 def format_cards_list(cards: List[str]) -> str:
     """Format a list of cards with bullet points."""
     return "\n".join(f"- {card}" for card in cards)
