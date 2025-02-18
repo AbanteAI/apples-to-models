@@ -41,7 +41,6 @@ jobs:
     - name: Run pyright
       run: |
         . .venv/bin/activate
-        pip install aiohttp[speedups]
         pyright
 
     - name: Run pytest
