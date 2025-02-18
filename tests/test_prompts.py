@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from openai.types.chat import (
     ChatCompletionMessageParam,
 )
