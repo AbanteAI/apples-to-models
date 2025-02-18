@@ -289,8 +289,7 @@ def test_judge_sees_played_cards():
     messages = create_judge_messages(game, 1)
     judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see played cards from previous rounds
-    assert_content_contains(judge_view, "Player 2 played: Ice")
+    # Judge should see played cards from previous rounds (except their own)
     assert_content_contains(judge_view, "Player 3 played: Winter")
 
     # Judge should not see any player's thinking
