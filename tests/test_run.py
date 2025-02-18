@@ -66,7 +66,9 @@ async def test_run_game(mock_call_model):
         generation_id="test-id-run",
         log_path=Path("tests/test.log"),
     )
-    mock_call_model.return_value = mock_response
+    future = asyncio.Future()
+    future.set_result(mock_response)
+    mock_call_model.return_value = future
 
     # Test new game with random models
     game_coro = run_game(num_rounds=3, num_players=2, models=["random", "random"])
@@ -189,7 +191,7 @@ def test_normalize_card_name():
     assert normalize_card_name("QuEeN eLiZaBeTh") == "queenelizabeth"
 
 
-def test_judge_move_with_exact_cards():
+async def test_judge_move_with_exact_cards():
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
     game = Game.new_game(["Player 1", "Player 2", "Player 3"])
@@ -222,8 +224,9 @@ def test_judge_move_with_exact_cards():
             generation_id="test-id",
             log_path=Path("tests/test.log"),
         )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        mock_call.return_value = asyncio.Future()
+        mock_call.return_value.set_result(mock_response)
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
         assert log_path == Path("tests/test.log")
@@ -238,8 +241,9 @@ def test_judge_move_with_exact_cards():
             generation_id="test-id-2",
             log_path=Path("tests/test.log"),
         )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        mock_call.return_value = asyncio.Future()
+        mock_call.return_value.set_result(mock_response)
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
         assert log_path == Path("tests/test.log")
@@ -254,8 +258,9 @@ def test_judge_move_with_exact_cards():
             generation_id="test-id-3",
             log_path=Path("tests/test.log"),
         )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        mock_call.return_value = asyncio.Future()
+        mock_call.return_value.set_result(mock_response)
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "Most graceful choice"
         assert log_path == Path("tests/test.log")
@@ -270,8 +275,9 @@ def test_judge_move_with_exact_cards():
             generation_id="test-id-4",
             log_path=Path("tests/test.log"),
         )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        mock_call.return_value = asyncio.Future()
+        mock_call.return_value.set_result(mock_response)
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
         assert log_path is None  # Random selection has no log
@@ -286,8 +292,9 @@ def test_judge_move_with_exact_cards():
             generation_id="test-id-5",
             log_path=Path("tests/test.log"),
         )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        mock_call.return_value = asyncio.Future()
+        mock_call.return_value.set_result(mock_response)
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
         assert log_path is None  # Random selection has no log
@@ -302,8 +309,9 @@ def test_judge_move_with_exact_cards():
             generation_id="test-id-6",
             log_path=Path("tests/test.log"),
         )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = model_judge_move(game, "test-model")
+        mock_call.return_value = asyncio.Future()
+        mock_call.return_value.set_result(mock_response)
+        card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
         assert log_path is None  # Random selection has no log
