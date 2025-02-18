@@ -2,6 +2,7 @@ from benchmark.model_utils import (
     Messages,
     call_model,
     ModelLogger,
+    ModelCall,
     JsonFormatter,
 )
 from pathlib import Path
