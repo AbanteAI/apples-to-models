@@ -69,88 +69,56 @@ class Messages:
         return iter(self.messages)
 
 
-class ModelLogger:
-    """Class to handle logging of model calls using a context manager."""
+def write_model_log(
+    model: str,
+    messages: Messages,
+    response: str,
+    cost: float,
+    duration: float,
+    log_dir: Optional[str] = None,
+) -> Path:
+    """Write a log file with model call information.
 
-    def __init__(self, log_dir: Optional[str] = None):
-        # Use game-specific log directory if set in environment, otherwise use default
-        self.log_dir = Path(log_dir or os.getenv("GAME_LOG_DIR", "benchmark/logs"))
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.start_time: float = 0
-        self.end_time: float = 0
-        self.model: str = ""
-        self.messages: Optional[Messages] = None
-        self.response: Optional[str] = None
-        self.cost: Optional[float] = None
-        self._log_counter: int = 0
+    Args:
+        model: The model identifier used
+        messages: The Messages instance containing the conversation
+        response: The model's response content
+        cost: The cost of the model call
+        duration: The duration of the model call in seconds
+        log_dir: Optional directory to write logs to (defaults to env var or benchmark/logs)
 
-    def __enter__(self):
-        self.start_time = time.time()
-        return self
+    Returns:
+        Path: The path to the written log file
+    """
+    # Use game-specific log directory if set in environment, otherwise use default
+    log_dir_path = Path(log_dir or os.getenv("GAME_LOG_DIR", "benchmark/logs"))
+    log_dir_path.mkdir(parents=True, exist_ok=True)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end_time = time.time()
-        if self.model and self.messages and self.response is not None:
-            return self._write_log()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = log_dir_path / f"model_call_{timestamp}.log"
 
-    def set_model_info(self, model: str, messages: Messages):
-        """Set the model and messages information."""
-        self.model = model
-        self.messages = messages
+    with open(log_file, "w", encoding="utf-8") as f:
+        # Write header with all metadata
+        f.write(f"Timestamp: {timestamp}\n")
+        f.write(f"Model: {model}\n")
+        f.write(f"Duration: {duration:.3f} seconds\n")
+        f.write(f"Cost: ${cost:.4f}\n")
+        f.write("-" * 80 + "\n\n")
 
-    def set_response(self, response: str):
-        """Set the model's response."""
-        self.response = response
+        # Write messages in a conversation format
+        f.write("=== Input Messages ===\n")
+        for msg in messages.messages:
+            role = msg["role"].upper()
+            content = msg.get("content", "") or ""
+            f.write(f"\n[{role}]\n{content}\n")
+        f.write("\n" + "-" * 80 + "\n")
 
-    def set_cost(self, cost: float):
-        """Set the cost of the model call (optional)."""
-        self.cost = cost
+        # Write model response
+        f.write("\n=== Model Response ===\n")
+        f.write(f"{response}\n")
+        f.write("\n" + "-" * 80)
 
-    def _write_log(self) -> Path:
-        """Write the log file with all collected information in a human-readable format.
-
-        Returns:
-            Path: The path to the written log file
-        """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self._log_counter += 1
-        log_file = self.log_dir / f"model_call_{self._log_counter:03d}_{timestamp}.log"
-
-        if not self.messages:
-            raise ValueError("Messages not set before writing log")
-
-        # Ensure we have valid timestamps
-        if self.start_time == 0:
-            self.start_time = time.time()
-        if self.end_time == 0:
-            self.end_time = time.time()
-        if self.end_time < self.start_time:
-            self.end_time = self.start_time
-
-        with open(log_file, "w", encoding="utf-8") as f:
-            # Write header with all metadata
-            duration = round(self.end_time - self.start_time, 3)
-            f.write(f"Timestamp: {timestamp}\n")
-            f.write(f"Model: {self.model}\n")
-            f.write(f"Duration: {duration} seconds\n")
-            if self.cost is not None:
-                f.write(f"Cost: ${self.cost:.4f}\n")
-            f.write("-" * 80 + "\n\n")
-
-            # Write messages in a conversation format
-            f.write("=== Input Messages ===\n")
-            for msg in self.messages.messages:
-                role = msg["role"].upper()
-                content = msg.get("content", "") or ""
-                f.write(f"\n[{role}]\n{content}\n")
-            f.write("\n" + "-" * 80 + "\n")
-
-            # Write model response
-            f.write("\n=== Model Response ===\n")
-            f.write(f"{self.response}\n")
-            f.write("\n" + "-" * 80)
-
-        return log_file
+    return log_file
 
 
 @async_retry(tries=8, delay=0.1, backoff=2)
@@ -199,39 +167,40 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         raise ValueError("OPEN_ROUTER_KEY environment variable is not set")
 
     client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    start_time = time.time()
 
-    with ModelLogger() as logger:
-        logger.set_model_info(model, messages)
+    # Make the initial completion request
+    response = await client.chat.completions.create(
+        model=model,
+        messages=list(messages),  # Convert Messages instance to list
+        temperature=0,
+    )
 
-        # Make the initial completion request
-        response = await client.chat.completions.create(
-            model=model,
-            messages=list(messages),  # Convert Messages instance to list
-            temperature=0,
-        )
+    content = response.choices[0].message.content
+    if content is None:
+        raise ValueError("Model response content was None")
 
-        content = response.choices[0].message.content
-        if content is None:
-            raise ValueError("Model response content was None")
+    # Get the generation ID from the response
+    generation_id = response.id
 
-        # Get the generation ID from the response
-        generation_id = response.id
+    # Fetch generation stats
+    stats = await get_generation_stats(generation_id, api_key)
+    duration = time.time() - start_time
 
-        # Fetch generation stats
-        stats = await get_generation_stats(generation_id, api_key)
-        model_response = ModelResponse(
-            content=content,
-            tokens_prompt=stats["tokens_prompt"],
-            tokens_completion=stats["tokens_completion"],
-            total_cost=stats["total_cost"],
-            generation_id=generation_id,
-        )
+    # Write log file
+    log_path = write_model_log(
+        model=model,
+        messages=messages,
+        response=content,
+        cost=stats["total_cost"],
+        duration=duration,
+    )
 
-        logger.set_response(content)
-        logger.set_cost(stats["total_cost"])
-
-        # Get the log path from the logger
-        log_path = logger._write_log()
-        model_response.log_path = log_path
-
-        return model_response
+    return ModelResponse(
+        content=content,
+        tokens_prompt=stats["tokens_prompt"],
+        tokens_completion=stats["tokens_completion"],
+        total_cost=stats["total_cost"],
+        generation_id=generation_id,
+        log_path=log_path,
+    )
