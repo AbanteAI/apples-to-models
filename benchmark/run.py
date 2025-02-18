@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import random
 from datetime import datetime
 from pathlib import Path
@@ -155,7 +156,7 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         return winning_move.played_card, "Random selection (model failed)"
 
 
-def run_game(
+async def run_game(
     num_rounds: int,
     num_players: int,
     models: List[str],
@@ -186,49 +187,52 @@ def run_game(
         )
         cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
-        # Have non-judge players make moves in parallel
-        import threading
-        from concurrent.futures import ThreadPoolExecutor, as_completed
+        # Have non-judge players make moves in parallel using asyncio
+        import asyncio
+        import sys
 
-        # Lock for thread-safe printing
-        print_lock = threading.Lock()
+        async def safe_print(*args, color=None):
+            """Thread-safe print function that maintains consistent output"""
+            if color:
+                cprint(*args, color)
+            else:
+                print(*args)
+            sys.stdout.flush()
 
-        def process_player_move(player_idx, model):
+        async def process_player_move(player_idx, model):
             if player_idx == round.judge:
                 return None
 
             player = game.players[player_idx]
-            with print_lock:
-                cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
-                cprint(f"Hand: {', '.join(player.hand)}", "red")
+            await safe_print(
+                f"\n{player.name} (Player {player_idx})'s turn", color="red"
+            )
+            await safe_print(f"Hand: {', '.join(player.hand)}", color="red")
 
             if model == "random":
                 card, thinking = random_player_move(game, player_idx)
             else:
                 card, thinking = model_player_move(game, player_idx, model)
 
-            with print_lock:
-                cprint(f"Plays: {card}", "red")
-                cprint(f"Thinking: {thinking}", "red")
+            await safe_print(f"Plays: {card}", color="red")
+            await safe_print(f"Thinking: {thinking}", color="red")
 
             return player_idx, card, thinking
 
-        # Create a thread pool and submit tasks for each non-judge player
-        with ThreadPoolExecutor() as executor:
-            # Submit tasks for all players (non-judge players will be processed)
-            future_to_player = {
-                executor.submit(
-                    process_player_move, player_idx, models[player_idx]
-                ): player_idx
-                for player_idx in range(num_players)
-            }
+        # Create tasks for all players
+        tasks = [
+            process_player_move(player_idx, models[player_idx])
+            for player_idx in range(num_players)
+        ]
 
-            # Process completed moves
-            for future in as_completed(future_to_player):
-                result = future.result()
-                if result:  # Skip None results (judge's turn)
-                    player_idx, card, thinking = result
-                    game.play_card(player_idx, card, thinking)
+        # Run all tasks concurrently and collect results
+        results = await asyncio.gather(*tasks)
+
+        # Process completed moves
+        for result in results:
+            if result:  # Skip None results (judge's turn)
+                player_idx, card, thinking = result
+                game.play_card(player_idx, card, thinking)
 
         # Judge selects a winner
         judge_model = models[round.judge]
@@ -292,12 +296,15 @@ def main():
 
     try:
         validate_args(args)
-        game = run_game(
-            num_rounds=args.rounds,
-            num_players=args.players,
-            models=args.models,
-            load_game_path=args.load_game,
-            save_game_path=args.save_game,
+        # Run the async game in the event loop
+        game = asyncio.run(
+            run_game(
+                num_rounds=args.rounds,
+                num_players=args.players,
+                models=args.models,
+                load_game_path=args.load_game,
+                save_game_path=args.save_game,
+            )
         )
 
         # Print final scores
