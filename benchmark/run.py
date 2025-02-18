@@ -76,7 +76,7 @@ def validate_args(args: argparse.Namespace) -> None:
     if args.rounds % args.players != 0:
         cprint(
             f"\nWarning: The number of rounds ({args.rounds}) is not divisible by the number of players ({args.players}). "
-            "This means players will not have the same number of opportunities to be the judge.",
+            "This means players will not have the same number of opportunities to score (be a player rather than judge).",
             "yellow",
         )
 
