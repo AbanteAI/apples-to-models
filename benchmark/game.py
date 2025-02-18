@@ -147,9 +147,7 @@ class Game(BaseModel):
             played_card=card,
             thinking=thinking,
             drawn_card=new_card,
-            log_path=Path(
-                "benchmark/logs/dummy.log"
-            ),  # Will be overwritten by actual log path
+            log_path=Path("benchmark/logs/no_log.txt"),  # Default path for random moves
         )
 
     def judge_round(self, winning_card: str, reasoning: str) -> None:
@@ -187,9 +185,7 @@ class Game(BaseModel):
             winning_card=winning_card,
             winning_player=winning_player,
             reasoning=reasoning,
-            log_path=Path(
-                "benchmark/logs/dummy.log"
-            ),  # Will be overwritten by actual log path
+            log_path=Path("benchmark/logs/no_log.txt"),  # Default path for random moves
         )
 
         # Update winner's score
