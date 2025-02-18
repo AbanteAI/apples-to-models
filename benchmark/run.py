@@ -219,8 +219,7 @@ async def run_game(
             cprint(f"Hand: {', '.join(player.hand)}", "red")
 
             if model == "random":
-                card, thinking = random_player_move(game, player_idx)
-                log_path = None
+                card, thinking, log_path = random_player_move(game, player_idx)
             else:
                 card, thinking, log_path = model_player_move(game, player_idx, model)
 
