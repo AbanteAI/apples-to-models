@@ -1,4 +1,3 @@
-
 from openai.types.chat import (
     ChatCompletionMessageParam,
 )
