@@ -18,27 +18,7 @@ from openai.types.chat import (
 from pydantic import BaseModel
 
 
-def async_retry(tries=8, delay=0.1, backoff=2):
-    """Retry decorator for async functions"""
-
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            _tries, _delay = tries, delay
-            while _tries > 0:
-                try:
-                    return await func(*args, **kwargs)
-                except Exception:
-                    _tries -= 1
-                    if _tries == 0:
-                        raise
-                    await asyncio.sleep(_delay)
-                    _delay *= backoff
-            return None
-
-        return wrapper
-
-    return decorator
+from retry_async import retry_async
 
 
 class ModelResponse(BaseModel):
@@ -168,7 +148,7 @@ class ModelLogger:
         return log_file
 
 
-@async_retry(tries=8, delay=0.1, backoff=2)
+@retry_async(attempts=8, delay=0.1, backoff=2)
 async def get_generation_stats(generation_id: str, api_key: str) -> dict:
     """
     Fetch generation statistics from OpenRouter API with retry logic.
@@ -196,7 +176,7 @@ async def get_generation_stats(generation_id: str, api_key: str) -> dict:
             return stats_data["data"]
 
 
-@async_retry(tries=5, delay=0.1, backoff=2)
+@retry_async(attempts=5, delay=0.1, backoff=2)
 async def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
