@@ -197,12 +197,28 @@ class Game(BaseModel):
 
     def save_game(self, filepath: str) -> None:
         """Save the game state to a JSON file"""
+
+        def path_serializer(obj):
+            if isinstance(obj, Path):
+                return str(obj)
+            raise TypeError(
+                f"Object of type {type(obj).__name__} is not JSON serializable"
+            )
+
         with open(filepath, "w") as f:
-            json.dump(self.model_dump(), f, indent=2)
+            data = self.model_dump()
+            json.dump(data, f, indent=2, default=path_serializer)
 
     @classmethod
     def load_game(cls, filepath: str) -> "Game":
         """Load a game state from a JSON file"""
         with open(filepath) as f:
             data = json.load(f)
+            # Convert string paths back to Path objects
+            for round in data.get("rounds", []):
+                for move in round.get("moves", {}).values():
+                    if "log_path" in move:
+                        move["log_path"] = Path(move["log_path"])
+                if round.get("decision") and "log_path" in round["decision"]:
+                    round["decision"]["log_path"] = Path(round["decision"]["log_path"])
         return cls.model_validate(data)
