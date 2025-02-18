@@ -9,20 +9,6 @@ SYSTEM_MESSAGE = (
     "that they think best match the green card. The judge picks the best match."
 )
 
-PLAYER_PROMPT = (
-    "Which card from your hand best matches this green card? "
-    "Respond with your reasoning followed by the card name, separated by ' | '. "
-    "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
-    "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
-)
-
-JUDGE_PROMPT = (
-    "Which red card best matches the green card? "
-    "Respond with your reasoning followed by the card name, separated by ' | '. "
-    "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
-    "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
-)
-
 
 def format_cards_list(cards: List[str]) -> str:
     """Format a list of cards with bullet points."""
@@ -31,10 +17,16 @@ def format_cards_list(cards: List[str]) -> str:
 
 def create_player_prompt(player_idx: int, green_card: str, hand: List[str]) -> str:
     """Create the prompt for a player to select a card."""
+    prompt = (
+        "Which card from your hand best matches this green card? "
+        "Respond with your reasoning followed by the card name, separated by ' | '. "
+        "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
+        "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
+    )
     return (
         f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
         f"Your hand (red cards) contains: {', '.join(hand)}\n"
-        f"{PLAYER_PROMPT}"
+        f"{prompt}"
     )
 
 
@@ -42,11 +34,17 @@ def create_judge_prompt(
     round_num: int, green_card: str, played_cards: List[str]
 ) -> str:
     """Create the prompt for a judge to select a winning card."""
+    prompt = (
+        "Which red card best matches the green card? "
+        "Respond with your reasoning followed by the card name, separated by ' | '. "
+        "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
+        "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
+    )
     return (
         f"Current Round {round_num + 1}\n"
         f"You are the judge. The green card is: {green_card}\n"
         f"The played red cards are:\n{format_cards_list(played_cards)}\n"
-        f"{JUDGE_PROMPT}"
+        f"{prompt}"
     )
 
 
