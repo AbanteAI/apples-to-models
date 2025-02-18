@@ -25,6 +25,16 @@ class ModelResponse(BaseModel):
     total_cost: float
     generation_id: str
 
+    def __str__(self) -> str:
+        """Return a human-readable string representation."""
+        return (
+            f"ModelResponse(content='{self.content}', "
+            f"tokens_prompt={self.tokens_prompt}, "
+            f"tokens_completion={self.tokens_completion}, "
+            f"total_cost=${self.total_cost:.6f}, "
+            f"generation_id='{self.generation_id}')"
+        )
+
 
 class Messages:
     def __init__(self):

@@ -85,7 +85,7 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
     try:
         messages = create_player_messages(game, player_idx, green_card, player.hand)
         response = call_model(model, messages)
-        thinking, card = response.split("|", 1)
+        thinking, card = response.content.split("|", 1)
         thinking = thinking.strip()
 
         # Normalize the chosen card and player's hand
@@ -122,12 +122,12 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         response = call_model(model, messages)
         try:
             # Require exactly one separator
-            if response.count("|") != 1:
+            if response.content.count("|") != 1:
                 raise ValueError(
-                    f"Response must contain exactly one '|' separator: {response}"
+                    f"Response must contain exactly one '|' separator: {response.content}"
                 )
 
-            thinking, card = response.split("|", 1)
+            thinking, card = response.content.split("|", 1)
             thinking = thinking.strip()
             card = card.strip()
 
