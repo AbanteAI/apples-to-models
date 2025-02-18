@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from termcolor import cprint  # type: ignore
 
-from benchmark.game import Game
+from benchmark.game import Game, JudgeDecision
 from benchmark.game_report import save_html_report
 
 # Create games directory if it doesn't exist
@@ -74,12 +74,12 @@ def validate_args(args: argparse.Namespace) -> None:
         raise FileNotFoundError(f"Game file not found: {args.load_game}")
 
 
-def random_player_move(game: Game, player_idx: int) -> tuple[str, str]:
+def random_player_move(game: Game, player_idx: int) -> tuple[str, str, Optional[Path]]:
     """Make a random move for the given player"""
     player = game.players[player_idx]
     card = random.choice(player.hand)
     thinking = "Random selection"
-    return card, thinking
+    return card, thinking, None
 
 
 def normalize_card_name(card: str) -> str:
@@ -87,7 +87,9 @@ def normalize_card_name(card: str) -> str:
     return "".join(c.lower() for c in card if c.isalpha())
 
 
-def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str]:
+def model_player_move(
+    game: Game, player_idx: int, model: str
+) -> tuple[str, str, Optional[Path]]:
     """Make a model-based move for the given player"""
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_player_messages
@@ -112,16 +114,17 @@ def model_player_move(game: Game, player_idx: int, model: str) -> tuple[str, str
         else:
             raise ValueError(f"Model chose card '{card}' which is not in player's hand")
 
-        return card, thinking
+        return card, thinking, response.log_path
     except Exception as e:
         # Fallback to random selection if model fails
         print(
             f"Model error for player {player_idx + 1}, falling back to random: {str(e)}"
         )
-        return random_player_move(game, player_idx)
+        card, thinking, _ = random_player_move(game, player_idx)
+        return card, thinking, None
 
 
-def model_judge_move(game: Game, model: str) -> tuple[str, str]:
+def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
     """Make a model-based judging decision"""
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_judge_messages
@@ -156,7 +159,7 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
                     f"Could not find matching card '{card}' among played cards: {played_cards}"
                 )
 
-            return card, thinking
+            return card, thinking, response.log_path
         except Exception as e:
             # Print raw response only when there's an error parsing it
             print(f"\nError parsing judge response. Raw response was: {response}")
@@ -165,7 +168,7 @@ def model_judge_move(game: Game, model: str) -> tuple[str, str]:
         # Fallback to random selection if model fails
         print(f"Model error for judge, falling back to random: {str(e)}")
         winning_move = random.choice(list(moves.values()))
-        return winning_move.played_card, "Random selection (model failed)"
+        return winning_move.played_card, "Random selection (model failed)", None
 
 
 async def run_game(
@@ -216,14 +219,14 @@ async def run_game(
             cprint(f"Hand: {', '.join(player.hand)}", "red")
 
             if model == "random":
-                card, thinking = random_player_move(game, player_idx)
+                card, thinking, log_path = random_player_move(game, player_idx)
             else:
-                card, thinking = model_player_move(game, player_idx, model)
+                card, thinking, log_path = model_player_move(game, player_idx, model)
 
             cprint(f"Plays: {card}", "red")
             cprint(f"Thinking: {thinking}", "red")
 
-            return player_idx, card, thinking
+            return player_idx, card, thinking, log_path
 
         # Create tasks for all players
         tasks = [
@@ -237,23 +240,31 @@ async def run_game(
         # Process completed moves
         for result in results:
             if result:  # Skip None results (judge's turn)
-                player_idx, card, thinking = result
+                player_idx, card, thinking, log_path = result
                 game.play_card(player_idx, card, thinking)
+                if log_path and player_idx in game.rounds[-1].moves:
+                    game.rounds[-1].moves[player_idx].log_path = log_path
 
         # Judge selects a winner
         judge_model = models[round.judge]
         cprint("\nJudge's Decision:", "green")
         if judge_model == "random":
-            moves = round.moves
-            winning_move = random.choice(list(moves.values()))
-            game.judge_round(
-                winning_move.played_card,
-                "Random selection",
-            )
-            cprint(f"Winner: {winning_move.played_card}", "green")
+            winning_move = random.choice(list(round.moves.values()))
+            winning_card = winning_move.played_card
+            thinking = "Random selection"
+            game.judge_round(winning_card, thinking)
+            # Create a new decision with the no_log path
+            if game.rounds[-1].decision:
+                game.rounds[-1].decision = JudgeDecision(
+                    winning_card=winning_card,
+                    winning_player=game.rounds[-1].decision.winning_player,
+                    reasoning=thinking,
+                    log_path=Path("benchmark/logs/no_log.txt"),
+                )
+            cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
-            for player_idx, move in moves.items():
-                if move.played_card == winning_move.played_card:
+            for player_idx, move in round.moves.items():
+                if move.played_card == winning_card:
                     winning_player = game.players[player_idx]
                     cprint(
                         f"{winning_player.name} (Player {player_idx}) wins the round!",
@@ -261,8 +272,18 @@ async def run_game(
                     )
                     break
         else:
-            winning_card, thinking = model_judge_move(game, judge_model)
+            winning_card, thinking, log_path = model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
+            # Create a new decision with the log path
+            if game.rounds[-1].decision:
+                game.rounds[-1].decision = JudgeDecision(
+                    winning_card=winning_card,
+                    winning_player=game.rounds[-1].decision.winning_player,
+                    reasoning=thinking,
+                    log_path=log_path
+                    if log_path
+                    else Path("benchmark/logs/no_log.txt"),
+                )
             cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in round.moves.items():

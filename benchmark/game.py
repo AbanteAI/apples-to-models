@@ -1,7 +1,7 @@
 import json
 import random
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -44,6 +44,7 @@ class PlayerMove(BaseModel):
     played_card: str
     thinking: str  # Private reasoning for the move
     drawn_card: str  # Card drawn to replace the played card
+    log_path: Union[str, Path]  # Path to the model call log
 
 
 class JudgeDecision(BaseModel):
@@ -52,6 +53,7 @@ class JudgeDecision(BaseModel):
     winning_card: str
     winning_player: int
     reasoning: str  # Public reasoning for the decision
+    log_path: Union[str, Path]  # Path to the model call log
 
 
 class Round(BaseModel):
@@ -142,7 +144,10 @@ class Game(BaseModel):
 
         # Record the move
         current_round.moves[player_index] = PlayerMove(
-            played_card=card, thinking=thinking, drawn_card=new_card
+            played_card=card,
+            thinking=thinking,
+            drawn_card=new_card,
+            log_path=Path("benchmark/logs/no_log.txt"),  # Default path for random moves
         )
 
     def judge_round(self, winning_card: str, reasoning: str) -> None:
@@ -180,6 +185,7 @@ class Game(BaseModel):
             winning_card=winning_card,
             winning_player=winning_player,
             reasoning=reasoning,
+            log_path=Path("benchmark/logs/no_log.txt"),  # Default path for random moves
         )
 
         # Update winner's score
@@ -187,12 +193,28 @@ class Game(BaseModel):
 
     def save_game(self, filepath: str) -> None:
         """Save the game state to a JSON file"""
+
+        def path_serializer(obj):
+            if isinstance(obj, Path):
+                return str(obj)
+            raise TypeError(
+                f"Object of type {type(obj).__name__} is not JSON serializable"
+            )
+
         with open(filepath, "w") as f:
-            json.dump(self.model_dump(), f, indent=2)
+            data = self.model_dump()
+            json.dump(data, f, indent=2, default=path_serializer)
 
     @classmethod
     def load_game(cls, filepath: str) -> "Game":
         """Load a game state from a JSON file"""
         with open(filepath) as f:
             data = json.load(f)
+            # Convert string paths back to Path objects
+            for round in data.get("rounds", []):
+                for move in round.get("moves", {}).values():
+                    if "log_path" in move:
+                        move["log_path"] = Path(move["log_path"])
+                if round.get("decision") and "log_path" in round["decision"]:
+                    round["decision"]["log_path"] = Path(round["decision"]["log_path"])
         return cls.model_validate(data)

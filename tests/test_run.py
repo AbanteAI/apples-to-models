@@ -64,6 +64,7 @@ async def test_run_game(mock_call_model):
         tokens_completion=5,
         total_cost=0.0001,
         generation_id="test-id-run",
+        log_path=Path("tests/test.log"),
     )
     mock_call_model.return_value = mock_response
 
@@ -200,9 +201,13 @@ def test_judge_move_with_exact_cards():
             played_card="Queen Elizabeth",
             thinking="Some thinking",
             drawn_card="New Card",
+            log_path=Path("tests/test.log"),
         ),
         2: PlayerMove(
-            played_card="Dreams", thinking="Some thinking", drawn_card="New Card"
+            played_card="Dreams",
+            thinking="Some thinking",
+            drawn_card="New Card",
+            log_path=Path("tests/test.log"),
         ),
     }
     game.rounds = [round]
@@ -215,11 +220,13 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
+        assert log_path == Path("tests/test.log")
 
     # Test case 2: Model responds with proper format and punctuation
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -229,11 +236,13 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-2",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
+        assert log_path == Path("tests/test.log")
 
     # Test case 3: Model responds with proper format and different case
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -243,11 +252,13 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-3",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "Most graceful choice"
+        assert log_path == Path("tests/test.log")
 
     # Test case 4: Model responds without separator
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -257,11 +268,13 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-4",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
+        assert log_path is None  # Random selection has no log
 
     # Test case 5: Model responds with multiple separators
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -271,11 +284,13 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-5",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
+        assert log_path is None  # Random selection has no log
 
     # Test case 6: Model responds with invalid card
     with patch("benchmark.model_utils.call_model") as mock_call:
@@ -285,8 +300,10 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-6",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
-        card, thinking = model_judge_move(game, "test-model")
+        card, thinking, log_path = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
+        assert log_path is None  # Random selection has no log

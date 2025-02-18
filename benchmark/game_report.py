@@ -264,8 +264,11 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
         <div class="judge-section">
             <h4>👨‍⚖️ Judge: {judge_name}</h4>"""
     if round.decision:
+        log_link = ""
+        if round.decision.log_path:
+            log_link = f' <a href="file://{round.decision.log_path}" target="_blank">(View model log)</a>'
         html += f"""
-            <p><strong>Decision:</strong> {round.decision.reasoning}</p>
+            <p><strong>Decision:</strong> {round.decision.reasoning}{log_link}</p>
         </div>
         <div class="winner-section">
             <h4>🏆 Winner: {players[round.decision.winning_player].name}</h4>
@@ -295,7 +298,7 @@ def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str
             <div class="{submission_class}">
                 <p><strong>{player.name}'s Card:</strong> "{move.played_card}"</p>
                 <div class="thinking">
-                    <strong>Reasoning:</strong><br>
+                    <strong>Reasoning:</strong>{' <a href="file://' + str(move.log_path) + '" target="_blank">(View model log)</a>' if move.log_path else ''}<br>
                     {move.thinking}
                 </div>
             </div>"""
