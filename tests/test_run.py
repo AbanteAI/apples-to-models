@@ -7,6 +7,7 @@ import sys
 
 from benchmark.run import create_parser, validate_args, run_game, main, model_judge_move
 from benchmark.game import Game, Round, PlayerMove
+from benchmark.model_utils import ModelResponse
 
 
 def test_argument_validation():
@@ -53,7 +54,14 @@ def test_argument_validation():
 @patch("benchmark.model_utils.call_model")
 def test_run_game(mock_call_model):
     # Mock model responses
-    mock_call_model.return_value = "Test Card|Because it matches"
+    mock_response = ModelResponse(
+        content="Test Card|Because it matches",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id-run",
+    )
+    mock_call_model.return_value = mock_response
 
     # Test new game with random models
     game = run_game(num_rounds=3, num_players=2, models=["random", "random"])
@@ -193,42 +201,84 @@ def test_judge_move_with_exact_cards():
 
     # Test case 1: Model responds with proper format
     with patch("benchmark.model_utils.call_model") as mock_call:
-        mock_call.return_value = "After careful consideration | Queen Elizabeth"
+        mock_response = ModelResponse(
+            content="After careful consideration | Queen Elizabeth",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id",
+        )
+        mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
 
     # Test case 2: Model responds with proper format and punctuation
     with patch("benchmark.model_utils.call_model") as mock_call:
-        mock_call.return_value = "She's very graceful! | Queen Elizabeth."
+        mock_response = ModelResponse(
+            content="She's very graceful! | Queen Elizabeth.",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-2",
+        )
+        mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
 
     # Test case 3: Model responds with proper format and different case
     with patch("benchmark.model_utils.call_model") as mock_call:
-        mock_call.return_value = "Most graceful choice | QUEEN ELIZABETH"
+        mock_response = ModelResponse(
+            content="Most graceful choice | QUEEN ELIZABETH",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-3",
+        )
+        mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "Most graceful choice"
 
     # Test case 4: Model responds without separator
     with patch("benchmark.model_utils.call_model") as mock_call:
-        mock_call.return_value = "Queen Elizabeth is the most graceful choice"
+        mock_response = ModelResponse(
+            content="Queen Elizabeth is the most graceful choice",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-4",
+        )
+        mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
 
     # Test case 5: Model responds with multiple separators
     with patch("benchmark.model_utils.call_model") as mock_call:
-        mock_call.return_value = "First | Second | Third"
+        mock_response = ModelResponse(
+            content="First | Second | Third",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-5",
+        )
+        mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
 
     # Test case 6: Model responds with invalid card
     with patch("benchmark.model_utils.call_model") as mock_call:
-        mock_call.return_value = "This is graceful | The Moon"
+        mock_response = ModelResponse(
+            content="This is graceful | The Moon",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-6",
+        )
+        mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert thinking == "Random selection (model failed)"
