@@ -3,30 +3,11 @@ import asyncio
 import random
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import List, Optional
 
-from termcolor import ATTRIBUTES, COLORS, cprint  # type: ignore
+from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
-
-
-def safe_cprint(
-    text: str, color: str, attrs: Optional[List[str]] = None, end: str = "\n"
-) -> None:
-    """Type-safe wrapper for cprint"""
-    if color not in COLORS:
-        raise ValueError(
-            f"Invalid color: {color}. Must be one of {list(COLORS.keys())}"
-        )
-    if attrs:
-        invalid_attrs = [attr for attr in attrs if attr not in ATTRIBUTES]
-        if invalid_attrs:
-            raise ValueError(
-                f"Invalid attributes: {invalid_attrs}. Must be from {list(ATTRIBUTES.keys())}"
-            )
-    # Cast the validated inputs to Any to bypass type checking
-    cprint(text, cast(Any, color), attrs=cast(Any, attrs), end=end)
-
 
 # Create games directory if it doesn't exist
 GAMES_DIR = Path(__file__).parent / "games"
@@ -200,40 +181,28 @@ async def run_game(
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
         round = game.start_round()
-        safe_cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
-        safe_cprint(
+        cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
+        cprint(
             f"Judge: {game.players[round.judge].name} (Player {round.judge})",
             "yellow",
         )
-        safe_cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
-
-        # Have non-judge players make moves in parallel using asyncio
-        import asyncio
-        import sys
-
-        async def safe_print(text: str, color: str | None = None):
-            """Thread-safe print function that maintains consistent output"""
-            if color:
-                safe_cprint(text, color)
-            else:
-                print(text)
-            sys.stdout.flush()
+        cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
         async def process_player_move(player_idx, model):
             if player_idx == round.judge:
                 return None
 
             player = game.players[player_idx]
-            await safe_print(f"\n{player.name} (Player {player_idx})'s turn", "red")
-            await safe_print(f"Hand: {', '.join(player.hand)}", "red")
+            cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
+            cprint(f"Hand: {', '.join(player.hand)}", "red")
 
             if model == "random":
                 card, thinking = random_player_move(game, player_idx)
             else:
                 card, thinking = model_player_move(game, player_idx, model)
 
-            await safe_print(f"Plays: {card}", "red")
-            await safe_print(f"Thinking: {thinking}", "red")
+            cprint(f"Plays: {card}", "red")
+            cprint(f"Thinking: {thinking}", "red")
 
             return player_idx, card, thinking
 
@@ -254,7 +223,7 @@ async def run_game(
 
         # Judge selects a winner
         judge_model = models[round.judge]
-        safe_cprint("\nJudge's Decision:", "green")
+        cprint("\nJudge's Decision:", "green")
         if judge_model == "random":
             moves = round.moves
             winning_move = random.choice(list(moves.values()))
@@ -262,12 +231,12 @@ async def run_game(
                 winning_move.played_card,
                 "Random selection",
             )
-            safe_cprint(f"Winner: {winning_move.played_card}", "green")
+            cprint(f"Winner: {winning_move.played_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in moves.items():
                 if move.played_card == winning_move.played_card:
                     winning_player = game.players[player_idx]
-                    safe_cprint(
+                    cprint(
                         f"{winning_player.name} (Player {player_idx}) wins the round!",
                         "green",
                     )
@@ -275,16 +244,16 @@ async def run_game(
         else:
             winning_card, thinking = model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
-            safe_cprint(f"Winner: {winning_card}", "green")
+            cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in round.moves.items():
                 if move.played_card == winning_card:
                     winning_player = game.players[player_idx]
-                    safe_cprint(
+                    cprint(
                         f"{winning_player.name} (Player {player_idx}) wins the round!",
                         "green",
                     )
-                    safe_cprint(f"Reasoning: {thinking}", "green")
+                    cprint(f"Reasoning: {thinking}", "green")
                     break
 
     # Save game (use default path if none specified)
@@ -326,9 +295,9 @@ def main():
         )
 
         # Print final scores
-        safe_cprint("\n🎮 Game completed! Final scores:", "magenta", attrs=["bold"])
+        cprint("\n🎮 Game completed! Final scores:", "magenta", attrs=["bold"])
         for idx, player in game.players.items():
-            safe_cprint(
+            cprint(
                 f"{player.name}: {len(player.won_rounds)} wins",
                 "magenta",
             )
