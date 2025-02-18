@@ -73,6 +73,13 @@ def validate_args(args: argparse.Namespace) -> None:
     if args.load_game and not Path(args.load_game).exists():
         raise FileNotFoundError(f"Game file not found: {args.load_game}")
 
+    if args.rounds % args.players != 0:
+        cprint(
+            f"\nWarning: The number of rounds ({args.rounds}) is not divisible by the number of players ({args.players}). "
+            "This means players will not have the same number of opportunities to score (be a player rather than judge).",
+            "yellow",
+        )
+
 
 def random_player_move(game: Game, player_idx: int) -> tuple[str, str, Optional[Path]]:
     """Make a random move for the given player"""
