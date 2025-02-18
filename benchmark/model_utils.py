@@ -132,7 +132,36 @@ class ModelLogger:
             f.write("\n" + "-" * 80)
 
 
-@retry(tries=3, backoff=2)
+@retry(tries=5, delay=1, backoff=2)
+def get_generation_stats(generation_id: str, api_key: str) -> dict:
+    """
+    Fetch generation statistics from OpenRouter API with retry logic.
+
+    Args:
+        generation_id: The ID of the generation to fetch stats for
+        api_key: OpenRouter API key
+
+    Returns:
+        Dictionary containing the generation statistics
+    """
+    headers = {"Authorization": f"Bearer {api_key}"}
+    stats_response = requests.get(
+        f"https://openrouter.ai/api/v1/generation?id={generation_id}",
+        headers=headers,
+    )
+
+    # Debug logging
+    print(f"Generation stats response: {stats_response.status_code}")
+    print(f"Response content: {stats_response.text}")
+
+    stats_data = stats_response.json()
+    if "data" not in stats_data:
+        raise ValueError(f"Stats data not available in response: {stats_response.text}")
+
+    return stats_data["data"]
+
+
+@retry(tries=3, delay=2, backoff=2)
 def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
@@ -167,23 +196,7 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
         generation_id = response.id
 
         # Fetch generation stats
-        headers = {"Authorization": f"Bearer {api_key}"}
-        stats_response = requests.get(
-            f"https://openrouter.ai/api/v1/generation?id={generation_id}",
-            headers=headers,
-        )
-
-        # Debug logging
-        print(f"Generation stats response: {stats_response.status_code}")
-        print(f"Response content: {stats_response.text}")
-
-        stats_data = stats_response.json()
-        if "data" not in stats_data:
-            raise ValueError(
-                f"Stats data not available in response: {stats_response.text}"
-            )
-
-        stats = stats_data["data"]
+        stats = get_generation_stats(generation_id, api_key)
         model_response = ModelResponse(
             content=content,
             tokens_prompt=stats["tokens_prompt"],
