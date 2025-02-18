@@ -95,8 +95,8 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         # Show played cards and thinking
         played_cards = []
         for pid, move in round.moves.items():
-            if pid == player_idx:
-                # Show the player's own move and thinking
+            if pid == player_idx and not round.decision:
+                # Show the player's own move and thinking only for the current round
                 messages.add_user(
                     create_player_prompt(pid, round.green_card, game.players[pid].hand)
                 )
