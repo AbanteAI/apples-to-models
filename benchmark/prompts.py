@@ -4,11 +4,22 @@ from benchmark.game import Game
 from benchmark.model_utils import Messages
 
 
-def format_scores(game: "Game", current_player: int) -> str:
-    """Format the scores for all players, marking the current player with (you)."""
+def format_scores(game: "Game", current_player: int, up_to_round: int = None) -> str:
+    """Format the scores for all players, marking the current player with (you).
+
+    Args:
+        game: The current game state
+        current_player: Index of the current player
+        up_to_round: If provided, only count wins up to this round number (inclusive)
+    """
     scores = []
     for idx, player in game.players.items():
-        score = len(player.won_rounds)
+        if up_to_round is not None:
+            score = sum(
+                1 for round_num in player.won_rounds if round_num <= up_to_round
+            )
+        else:
+            score = len(player.won_rounds)
         player_text = f"Player {idx + 1}: {score}"
         if idx == current_player:
             player_text += " (you)"
@@ -135,8 +146,10 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     f"Their reasoning: {round.decision.reasoning}"
                 )
 
-            # Show current scores after the decision
-            messages.add_user(f"\nCurrent Scores:\n{format_scores(game, player_idx)}\n")
+            # Show scores after the decision, up to the current round
+            messages.add_user(
+                f"\nScores:\n{format_scores(game, player_idx, round.round_number)}\n"
+            )
 
     return messages
 
