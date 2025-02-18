@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional
+from typing import List, Iterator, Optional, Dict, Any, Protocol
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionMessageParam,
@@ -14,29 +14,12 @@ import time
 from datetime import datetime
 from pathlib import Path
 import requests
-
-
-class ModelResponse(BaseModel):
-    """Response data from a model call including content and usage statistics."""
-
-    content: str
-    tokens_prompt: int
-    tokens_completion: int
-    total_cost: float
-    generation_id: str
-
-    def __str__(self) -> str:
-        """Return a human-readable string representation."""
-        return (
-            f"ModelResponse(content='{self.content}', "
-            f"tokens_prompt={self.tokens_prompt}, "
-            f"tokens_completion={self.tokens_completion}, "
-            f"total_cost=${self.total_cost:.6f}, "
-            f"generation_id='{self.generation_id}')"
-        )
+import json
 
 
 class Messages:
+    """Container for chat messages with helper methods for adding different message types."""
+
     def __init__(self):
         self.messages: List[ChatCompletionMessageParam] = []
 
@@ -65,71 +48,142 @@ class Messages:
         return iter(self.messages)
 
 
-class ModelLogger:
-    """Class to handle logging of model calls using a context manager."""
+class ModelResponse(BaseModel):
+    """Response data from a model call including content and usage statistics."""
 
-    def __init__(self, log_dir: str = "benchmark/logs"):
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.start_time: float = 0
-        self.end_time: float = 0
-        self.model: str = ""
-        self.messages: Optional[Messages] = None
-        self.response: Optional[str] = None
-        self.cost: Optional[float] = None
+    content: str
+    tokens_prompt: int
+    tokens_completion: int
+    total_cost: float
+    generation_id: str
 
-    def __enter__(self):
-        self.start_time = time.time()
-        return self
+    def __str__(self) -> str:
+        """Return a human-readable string representation."""
+        return (
+            f"ModelResponse(content='{self.content}', "
+            f"tokens_prompt={self.tokens_prompt}, "
+            f"tokens_completion={self.tokens_completion}, "
+            f"total_cost=${self.total_cost:.6f}, "
+            f"generation_id='{self.generation_id}')"
+        )
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.end_time = time.time()
-        if self.model and self.messages and self.response is not None:
-            self._write_log()
 
-    def set_model_info(self, model: str, messages: Messages):
-        """Set the model and messages information."""
+class ModelCall:
+    """Represents a single interaction with a model, including input, output, and metadata."""
+
+    def __init__(self, model: str, messages: Messages):
         self.model = model
         self.messages = messages
+        self.response: Optional[ModelResponse] = None
+        self.start_time = time.time()
+        self.end_time: Optional[float] = None
+        self.error: Optional[Exception] = None
 
-    def set_response(self, response: str):
-        """Set the model's response."""
+    def complete(self, response: ModelResponse) -> None:
+        """Mark the model call as complete with the given response."""
         self.response = response
+        self.end_time = time.time()
 
-    def set_cost(self, cost: float):
-        """Set the cost of the model call (optional)."""
-        self.cost = cost
+    def fail(self, error: Exception) -> None:
+        """Mark the model call as failed with the given error."""
+        self.error = error
+        self.end_time = time.time()
 
-    def _write_log(self) -> None:
-        """Write the log file with all collected information in a human-readable format."""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_file = self.log_dir / f"model_call_{timestamp.replace(':', '-')}.log"
+    @property
+    def duration(self) -> float:
+        """Return the duration of the model call in seconds."""
+        if self.end_time is None:
+            return time.time() - self.start_time
+        return self.end_time - self.start_time
 
-        if not self.messages:
-            raise ValueError("Messages not set before writing log")
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the model call to a dictionary representation."""
+        data = {
+            "model": self.model,
+            "messages": [dict(m) for m in self.messages],
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "duration": self.duration,
+        }
+        if self.response:
+            data["response"] = self.response.model_dump()
+        if self.error:
+            data["error"] = str(self.error)
+        return data
 
+
+class LogFormatter(Protocol):
+    """Protocol for formatting model calls into logs."""
+
+    def format(self, model_call: ModelCall) -> str:
+        """Format a model call into a log string."""
+        ...
+
+
+class HumanReadableFormatter:
+    """Formats model calls into human-readable text."""
+
+    def format(self, model_call: ModelCall) -> str:
+        lines = []
+
+        # Header
+        lines.append(f"Timestamp: {datetime.fromtimestamp(model_call.start_time)}")
+        lines.append(f"Model: {model_call.model}")
+        lines.append(f"Duration: {model_call.duration:.3f} seconds")
+        if model_call.response:
+            lines.append(f"Cost: ${model_call.response.total_cost:.4f}")
+        lines.append("-" * 80 + "\n")
+
+        # Messages
+        lines.append("=== Input Messages ===")
+        for msg in model_call.messages:
+            role = msg["role"].upper()
+            content = msg.get("content", "") or ""
+            lines.append(f"\n[{role}]\n{content}")
+        lines.append("\n" + "-" * 80 + "\n")
+
+        # Response or Error
+        if model_call.response:
+            lines.append("=== Model Response ===")
+            lines.append(model_call.response.content)
+        elif model_call.error:
+            lines.append("=== Error ===")
+            lines.append(str(model_call.error))
+        lines.append("\n" + "-" * 80)
+
+        return "\n".join(lines)
+
+
+class JsonFormatter:
+    """Formats model calls into JSON."""
+
+    def format(self, model_call: ModelCall) -> str:
+        return json.dumps(model_call.to_dict(), indent=2)
+
+
+class ModelLogger:
+    """Handles logging of model calls with configurable output format and destination."""
+
+    def __init__(
+        self,
+        log_dir: str = "benchmark/logs",
+        formatter: Optional[LogFormatter] = None,
+    ):
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.formatter = formatter or HumanReadableFormatter()
+
+    def log(self, model_call: ModelCall) -> None:
+        """Log a model call using the configured formatter."""
+        timestamp = datetime.fromtimestamp(model_call.start_time).strftime(
+            "%Y-%m-%d_%H-%M-%S"
+        )
+        extension = ".json" if isinstance(self.formatter, JsonFormatter) else ".log"
+        log_file = self.log_dir / f"model_call_{timestamp}{extension}"
+
+        log_content = self.formatter.format(model_call)
         with open(log_file, "w", encoding="utf-8") as f:
-            # Write header with all metadata
-            duration = round(self.end_time - self.start_time, 3)
-            f.write(f"Timestamp: {timestamp}\n")
-            f.write(f"Model: {self.model}\n")
-            f.write(f"Duration: {duration} seconds\n")
-            if self.cost is not None:
-                f.write(f"Cost: ${self.cost:.4f}\n")
-            f.write("-" * 80 + "\n\n")
-
-            # Write messages in a conversation format
-            f.write("=== Input Messages ===\n")
-            for msg in self.messages.messages:
-                role = msg["role"].upper()
-                content = msg.get("content", "") or ""
-                f.write(f"\n[{role}]\n{content}\n")
-            f.write("\n" + "-" * 80 + "\n")
-
-            # Write model response
-            f.write("\n=== Model Response ===\n")
-            f.write(f"{self.response}\n")
-            f.write("\n" + "-" * 80)
+            f.write(log_content)
 
 
 @retry(tries=3, backoff=2)
@@ -144,18 +198,19 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
     Returns:
         A ModelResponse object containing the response content and usage statistics
     """
-    load_dotenv()  # Load environment variables
+    load_dotenv()
     api_key = os.getenv("OPEN_ROUTER_KEY")
-
     client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
 
-    with ModelLogger() as logger:
-        logger.set_model_info(model, messages)
+    # Create a ModelCall instance to track this interaction
+    model_call = ModelCall(model, messages)
+    logger = ModelLogger()
 
+    try:
         # Make the initial completion request
         response = client.chat.completions.create(
             model=model,
-            messages=list(messages),  # Convert Messages instance to list
+            messages=list(messages),
             temperature=0,
         )
 
@@ -163,19 +218,13 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
         if content is None:
             raise ValueError("Model response content was None")
 
-        # Get the generation ID from the response
+        # Get the generation ID and stats
         generation_id = response.id
-
-        # Fetch generation stats
         headers = {"Authorization": f"Bearer {api_key}"}
         stats_response = requests.get(
             f"https://openrouter.ai/api/v1/generation?id={generation_id}",
             headers=headers,
         )
-
-        # Debug logging
-        print(f"Generation stats response: {stats_response.status_code}")
-        print(f"Response content: {stats_response.text}")
 
         stats_data = stats_response.json()
         if "data" not in stats_data:
@@ -192,7 +241,14 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
             generation_id=generation_id,
         )
 
-        logger.set_response(content)
-        logger.set_cost(stats["total_cost"])
+        # Complete the model call and log it
+        model_call.complete(model_response)
+        logger.log(model_call)
 
         return model_response
+
+    except Exception as e:
+        # Log failed calls as well
+        model_call.fail(e)
+        logger.log(model_call)
+        raise

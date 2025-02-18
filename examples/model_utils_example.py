@@ -1,14 +1,18 @@
-from benchmark.model_utils import Messages, call_model
+from benchmark.model_utils import (
+    Messages,
+    call_model,
+    ModelLogger,
+    JsonFormatter,
+)
+from pathlib import Path
 
 
-def main():
-    # Create a Messages instance
+def demonstrate_basic_usage():
+    """Demonstrate basic usage of the model utilities."""
+    print("\n=== Basic Usage ===")
     messages = Messages()
-
-    # Add a simple question
     messages.add_user("What is 2 + 2?")
 
-    # Call the model
     try:
         response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
         print("\nModel Response Details:")
@@ -20,6 +24,68 @@ def main():
         print(f"Generation ID: {response.generation_id}")
     except Exception as e:
         print("Error calling model:", e)
+
+
+def demonstrate_conversation():
+    """Demonstrate a multi-turn conversation with the model."""
+    print("\n=== Conversation Example ===")
+    messages = Messages()
+
+    # Set up a math tutor conversation
+    messages.add_system(
+        "You are a math tutor. Keep your responses brief and focused on mathematics."
+    )
+
+    try:
+        # First turn
+        messages.add_user("What is the formula for the area of a circle?")
+        response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
+        print("\nStudent: What is the formula for the area of a circle?")
+        print(f"Tutor: {response.content}")
+        messages.add_assistant(response.content)
+
+        # Second turn
+        messages.add_user("Can you explain why we square the radius?")
+        response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
+        print("\nStudent: Can you explain why we square the radius?")
+        print(f"Tutor: {response.content}")
+    except Exception as e:
+        print("Error in conversation:", e)
+
+
+def demonstrate_different_formatters():
+    """Demonstrate using different log formatters."""
+    print("\n=== Different Log Formats ===")
+
+    # Create separate directories for different log formats
+    log_base = Path("example_logs")
+    text_dir = log_base / "text"
+    json_dir = log_base / "json"
+
+    # Create loggers with different formatters
+    text_logger = ModelLogger(log_dir=str(text_dir))
+    json_logger = ModelLogger(log_dir=str(json_dir), formatter=JsonFormatter())
+
+    messages = Messages()
+    messages.add_user("What is the capital of France?")
+
+    try:
+        response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
+        print("\nLogs have been written to:")
+        print(f"Text format: {text_dir}")
+        print(f"JSON format: {json_dir}")
+    except Exception as e:
+        print("Error demonstrating formatters:", e)
+
+
+def main():
+    """Run all demonstrations."""
+    print("Model Utilities Examples")
+    print("=" * 40)
+
+    demonstrate_basic_usage()
+    demonstrate_conversation()
+    demonstrate_different_formatters()
 
 
 if __name__ == "__main__":
