@@ -244,8 +244,8 @@ def test_player_perspective_in_history():
     assert "Thunder is deafening" not in player1_history  # Other player's thinking
 
 
-def test_judge_sees_played_cards():
-    """Test that judges see played cards but not thinking"""
+def test_game_history_visibility():
+    """Test that game history shows the right information to each player"""
     game = Game.new_game(["Alice", "Bob", "Charlie"])
 
     # Set up a completed round
@@ -286,22 +286,43 @@ def test_judge_sees_played_cards():
     )
     game.rounds.append(round2)
 
+    # Test Player 1's view (judge in first round)
+    messages = create_player_messages(game, 0, "Hot", ["Sun", "Star"])
+    player1_view = " ".join(get_message_content(msg) for msg in messages.messages)
+
+    # Should see their own thinking from judging
+    assert_content_contains(
+        player1_view, "Ice is literally frozen and therefore the coldest"
+    )
+    # Should see winning player's identity
+    assert_content_contains(player1_view, "Player 2 played: Ice (Winner)")
+    # Should see other cards anonymously
+    assert_content_contains(player1_view, "Someone played: Winter")
+
+    # Test Player 2's view (winner of first round, judge in second)
     messages = create_judge_messages(game, 1)
-    judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
+    player2_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see played cards from previous rounds (except their own)
-    assert_content_contains(judge_view, "Player 3 played: Winter")
+    # Should see their own thinking from winning move
+    assert_content_contains(player2_view, "Ice is frozen water")
+    # Should see their own card marked as winner
+    assert_content_contains(player2_view, "Ice (Winner)")
+    # Should see other cards anonymously
+    assert_content_contains(player2_view, "Someone played: Winter")
+    # Should see current round cards anonymously
+    assert_content_contains(player2_view, "Fire")
+    assert_content_contains(player2_view, "Desert")
 
-    # Judge should not see any player's thinking
-    assert "Ice is frozen water" not in judge_view
-    assert "Winter is the coldest season" not in judge_view
-    assert "Fire is extremely hot" not in judge_view
-    assert "Deserts are very hot places" not in judge_view
+    # Test Player 3's view (regular player)
+    messages = create_player_messages(game, 2, "Hot", ["Desert"])
+    player3_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see the played cards in the current round (without thinking)
-    assert_content_contains(judge_view, "Fire")  # Just the card
-    assert_content_contains(judge_view, "Desert")  # Just the card
-    assert "Fire is extremely hot" not in judge_view  # No thinking in current round
-    assert (
-        "Deserts are very hot places" not in judge_view
-    )  # No thinking in current round
+    # Should see their own thinking
+    assert_content_contains(player3_view, "Winter is the coldest season")
+    # Should see winning player's identity
+    assert_content_contains(player3_view, "Player 2 played: Ice (Winner)")
+    # Should see current round cards anonymously
+    assert_content_contains(player3_view, "The played red cards are:")
+    # Should not see other players' thinking
+    assert "Fire is extremely hot" not in player3_view
+    assert "Ice is frozen water" not in player3_view
