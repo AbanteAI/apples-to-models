@@ -3,31 +3,29 @@ import asyncio
 import random
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import Any, List, Optional, cast
 
-from termcolor import cprint  # type: ignore
+from termcolor import ATTRIBUTES, COLORS, cprint  # type: ignore
 
 from benchmark.game import Game
 
-Color = Literal["red", "green", "yellow", "blue", "magenta", "cyan", "white", "grey"]
-
-VALID_COLORS = {"red", "green", "yellow", "blue", "magenta", "cyan", "white", "grey"}
-VALID_ATTRS = {"bold", "dark", "underline", "blink", "reverse", "concealed"}
-
 
 def safe_cprint(
-    text: str, color: str, attrs: List[str] | None = None, end: str = "\n"
+    text: str, color: str, attrs: Optional[List[str]] = None, end: str = "\n"
 ) -> None:
     """Type-safe wrapper for cprint"""
-    if color not in VALID_COLORS:
-        raise ValueError(f"Invalid color: {color}. Must be one of {VALID_COLORS}")
+    if color not in COLORS:
+        raise ValueError(
+            f"Invalid color: {color}. Must be one of {list(COLORS.keys())}"
+        )
     if attrs:
-        invalid_attrs = set(attrs) - VALID_ATTRS
+        invalid_attrs = [attr for attr in attrs if attr not in ATTRIBUTES]
         if invalid_attrs:
             raise ValueError(
-                f"Invalid attributes: {invalid_attrs}. Must be from {VALID_ATTRS}"
+                f"Invalid attributes: {invalid_attrs}. Must be from {list(ATTRIBUTES.keys())}"
             )
-    cprint(text, color, attrs=attrs, end=end)
+    # Cast the validated inputs to Any to bypass type checking
+    cprint(text, cast(Any, color), attrs=cast(Any, attrs), end=end)
 
 
 # Create games directory if it doesn't exist
