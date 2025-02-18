@@ -211,7 +211,7 @@ async def run_game(
         import asyncio
         import sys
 
-        async def safe_print(text: str, color: Color | None = None):
+        async def safe_print(text: str, color: str | None = None):
             """Thread-safe print function that maintains consistent output"""
             if color:
                 safe_cprint(text, color)
