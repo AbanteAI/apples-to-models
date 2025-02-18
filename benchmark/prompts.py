@@ -18,6 +18,80 @@ JUDGE_PROMPT = (
 )
 
 
+def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messages:
+    """Create messages containing the game history from a player's perspective.
+
+    Args:
+        game: The current game state
+        player_idx: The index of the player (0-based)
+        is_judge: Whether the player is currently the judge
+
+    Returns:
+        Messages object containing the system and historical messages
+    """
+    messages = Messages()
+    messages.add_system(
+        "You are playing Apples to Apples, a word association game. "
+        "In each round, there is a green card (an adjective) and players play red cards (nouns) "
+        "that they think best match the green card. The judge picks the best match."
+    )
+
+    # Add game history for all completed rounds
+    for round in game.rounds[:-1]:
+        messages.add_user(
+            f"Round {round.round_number + 1} - Green Card: {round.green_card}"
+        )
+
+        # Show played cards and thinking
+        for pid, move in round.moves.items():
+            if pid == player_idx:
+                # Show the player's own move
+                messages.add_user(
+                    f"You are Player {pid + 1}. The green card is: {round.green_card}\n"
+                    f"Your hand (red cards) contains: {', '.join(game.players[pid].hand)}\n"
+                    f"{PLAYER_PROMPT}"
+                )
+                messages.add_assistant(f"{move.thinking} | {move.played_card}")
+            else:
+                # Show other players' moves
+                if is_judge:
+                    messages.add_user(
+                        f"Player {pid + 1} played: {move.played_card}\n"
+                        f"Their thinking: {move.thinking}"
+                    )
+                else:
+                    messages.add_user(f"Player {pid + 1} played: {move.played_card}")
+
+        # Show judge's decision
+        if round.decision:
+            if round.judge == player_idx:
+                if is_judge:
+                    # Show the cards and prompt before showing judge's decision
+                    played_cards = [move.played_card for move in round.moves.values()]
+                    cards_list = "\n".join(f"- {card}" for card in played_cards)
+                    messages.add_user(
+                        f"Current Round {round.round_number + 1}\n"
+                        f"You are the judge. The green card is: {round.green_card}\n"
+                        f"The played red cards are:\n{cards_list}\n"
+                        f"{JUDGE_PROMPT}"
+                    )
+                    messages.add_assistant(
+                        f"{round.decision.reasoning} | {round.decision.winning_card}"
+                    )
+                else:
+                    messages.add_user(
+                        f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
+                        f"Your reasoning: {round.decision.reasoning}"
+                    )
+            else:
+                messages.add_user(
+                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
+                    f"Their reasoning: {round.decision.reasoning}"
+                )
+
+    return messages
+
+
 def create_player_messages(
     game: "Game", player_idx: int, green_card: str, hand: List[str]
 ) -> Messages:
@@ -32,53 +106,12 @@ def create_player_messages(
     Returns:
         Messages object containing the system and user messages
     """
-    messages = Messages()
-    messages.add_system(
-        "You are playing Apples to Apples, a word association game. "
-        "In each round, there is a green card and players play red cards "
-        "that they think best match the green card. The judge picks the best match."
-    )
-
-    # Add game history
-    for round in game.rounds[:-1]:  # All rounds except current
-        messages.add_user(
-            f"Round {round.round_number + 1} - Green Card: {round.green_card}"
-        )
-
-        # Show played cards and thinking
-        for pid, move in round.moves.items():
-            if pid == player_idx:
-                # Show the hand and prompt before showing player's thinking
-                messages.add_user(
-                    f"You are Player {pid + 1}. The green card is: {round.green_card}\n"
-                    f"Your hand (red cards) contains: {', '.join(game.players[pid].hand)}\n"
-                    f"{PLAYER_PROMPT}"
-                )
-                # Show player their own thinking in the reasoning | card format
-                messages.add_assistant(f"{move.thinking} | {move.played_card}")
-            else:
-                # Only show the card played by others, not their thinking
-                messages.add_user(f"Player {pid + 1} played: {move.played_card}")
-
-        # Show judge's decision and reasoning (visible to all)
-        if round.decision:
-            if round.judge == player_idx:
-                messages.add_user(
-                    f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
-                    f"Your reasoning: {round.decision.reasoning}"
-                )
-            else:
-                messages.add_user(
-                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
-                    f"Their reasoning: {round.decision.reasoning}"
-                )
-
+    messages = create_game_history(game, player_idx, is_judge=False)
     messages.add_user(
         f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
         f"Your hand (red cards) contains: {', '.join(hand)}\n"
         f"{PLAYER_PROMPT}"
     )
-
     return messages
 
 
@@ -92,58 +125,9 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
     Returns:
         Messages object containing the system and user messages
     """
-    messages = Messages()
-    messages.add_system(
-        "You are playing Apples to Apples, a word association game. "
-        "In each round, there is a green card (an adjective) and players play red cards (nouns) "
-        "that they think best match the green card. The judge picks the best match."
-    )
+    messages = create_game_history(game, judge_idx, is_judge=True)
 
-    # Add game history
-    for round in game.rounds[:-1]:  # All rounds except current
-        messages.add_user(
-            f"Round {round.round_number + 1} - Green Card: {round.green_card}"
-        )
-
-        # Show played cards and thinking
-        for player_idx, move in round.moves.items():
-            if player_idx == judge_idx:
-                # Show the hand and prompt before showing judge's thinking
-                messages.add_user(
-                    f"You are Player {player_idx + 1}. The green card is: {round.green_card}\n"
-                    f"Your hand (red cards) contains: {', '.join(game.players[player_idx].hand)}\n"
-                    f"{PLAYER_PROMPT}"
-                )
-                # Show judge's own thinking in the reasoning | card format
-                messages.add_assistant(f"{move.thinking} | {move.played_card}")
-            else:
-                messages.add_user(
-                    f"Player {player_idx + 1} played: {move.played_card}\n"
-                    f"Their thinking: {move.thinking}"
-                )
-
-        # Show judge's decision
-        if round.decision:
-            if round.judge == judge_idx:
-                # Show the cards to judge and prompt before showing judge's decision
-                played_cards = [move.played_card for move in round.moves.values()]
-                cards_list = "\n".join(f"- {card}" for card in played_cards)
-                messages.add_user(
-                    f"Current Round {round.round_number + 1}\n"
-                    f"You are the judge. The green card is: {round.green_card}\n"
-                    f"The played red cards are:\n{cards_list}\n"
-                    f"{JUDGE_PROMPT}"
-                )
-                messages.add_assistant(
-                    f"{round.decision.reasoning} | {round.decision.winning_card}"
-                )
-            else:
-                messages.add_user(
-                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
-                    f"Their reasoning: {round.decision.reasoning}"
-                )
-
-    # Current round
+    # Add current round prompt
     current_round = game.rounds[-1]
     played_cards = [move.played_card for move in current_round.moves.values()]
     cards_list = "\n".join(f"- {card}" for card in played_cards)
