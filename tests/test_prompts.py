@@ -177,15 +177,21 @@ def test_player_perspective_in_history():
     )
     game.rounds.append(round1)
 
+    # Start new round
+    round2 = Round(round_number=1, green_card="Bright", judge=0)
+    game.rounds.append(round2)
+
     # Get messages for player 0
     player0_messages = create_player_messages(game, 0, "Bright", ["Sun", "Star"])
     player0_history = " ".join(
         get_message_content(msg) for msg in player0_messages.messages
     )
 
-    # Player 0 should see their own thinking but not player 1's
-    assert_content_contains(player0_history, "Thunder is deafening")
-    assert "Explosions are very loud" not in player0_history
+    # Player 0 should see their own move and the judge's decision
+    assert_content_contains(player0_history, "Thunder")  # Their played card
+    assert "Explosions" in player0_history  # Other player's card (but not thinking)
+    assert "Thunder is naturally loud" in player0_history  # Judge's reasoning
+    assert "Explosions are very loud" not in player0_history  # Other player's thinking
 
     # Get messages for player 1
     player1_messages = create_player_messages(game, 1, "Bright", ["Moon", "Fire"])
@@ -193,16 +199,18 @@ def test_player_perspective_in_history():
         get_message_content(msg) for msg in player1_messages.messages
     )
 
-    # Player 1 should see their own thinking but not player 0's
-    assert "Thunder is deafening" not in player1_history
-    assert_content_contains(player1_history, "Explosions are very loud")
+    # Player 1 should see their own move and the judge's decision
+    assert "Thunder" in player1_history  # Other player's card
+    assert_content_contains(player1_history, "Explosion")  # Their played card
+    assert "Thunder is naturally loud" in player1_history  # Judge's reasoning
+    assert "Thunder is deafening" not in player1_history  # Other player's thinking
 
 
 def test_judge_sees_all_thinking():
-    """Test that judges see all players' thinking"""
+    """Test that judges see all players' thinking in previous rounds"""
     game = Game.new_game(["Alice", "Bob", "Charlie"])
 
-    # Set up current round with moves
+    # Set up a completed round
     round1 = Round(round_number=0, green_card="Cold", judge=0)
     round1.moves[1] = PlayerMove(
         played_card="Ice", thinking="Ice is frozen water", drawn_card="Snow"
@@ -210,11 +218,30 @@ def test_judge_sees_all_thinking():
     round1.moves[2] = PlayerMove(
         played_card="Winter", thinking="Winter is the coldest season", drawn_card="Fall"
     )
+    round1.decision = JudgeDecision(
+        winning_card="Ice",
+        winning_player=1,
+        reasoning="Ice is literally frozen and therefore the coldest",
+    )
     game.rounds.append(round1)
 
-    messages = create_judge_messages(game, 0)
+    # Start new round
+    round2 = Round(round_number=1, green_card="Hot", judge=1)
+    round2.moves[0] = PlayerMove(
+        played_card="Fire", thinking="Fire is extremely hot", drawn_card="Sun"
+    )
+    round2.moves[2] = PlayerMove(
+        played_card="Desert", thinking="Deserts are very hot places", drawn_card="Beach"
+    )
+    game.rounds.append(round2)
+
+    messages = create_judge_messages(game, 1)
     judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see all players' thinking
-    assert_content_contains(judge_view, "Ice is frozen water")
-    assert_content_contains(judge_view, "Winter is the coldest season")
+    # Judge should see all players' thinking from previous round
+    assert_content_contains(judge_view, "Fire is extremely hot")
+    assert_content_contains(judge_view, "Deserts are very hot places")
+
+    # Judge should see the played cards in the current round
+    assert_content_contains(judge_view, "Fire")
+    assert_content_contains(judge_view, "Desert")
