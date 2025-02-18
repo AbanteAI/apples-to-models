@@ -3,11 +3,21 @@ import asyncio
 import random
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game
+
+Color = Literal["red", "green", "yellow", "blue", "magenta", "cyan", "white", "grey"]
+
+
+def safe_cprint(
+    text: str, color: Color, attrs: List[str] = [], end: str = "\n"
+) -> None:
+    """Type-safe wrapper for cprint"""
+    cprint(text, color, attrs=attrs, end=end)
+
 
 # Create games directory if it doesn't exist
 GAMES_DIR = Path(__file__).parent / "games"
@@ -181,25 +191,21 @@ async def run_game(
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
         round = game.start_round()
-        cprint(f"\n=== Round {len(game.rounds)} ===", "yellow", attrs=[], end="\n")
-        cprint(
+        safe_cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
+        safe_cprint(
             f"Judge: {game.players[round.judge].name} (Player {round.judge})",
             "yellow",
-            attrs=[],
-            end="\n",
         )
-        cprint(
-            f"Green Card (Adjective): {round.green_card}", "yellow", attrs=[], end="\n"
-        )
+        safe_cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
         # Have non-judge players make moves in parallel using asyncio
         import asyncio
         import sys
 
-        async def safe_print(text: str, color: str | None = None):
+        async def safe_print(text: str, color: Color | None = None):
             """Thread-safe print function that maintains consistent output"""
             if color:
-                cprint(text, color, attrs=[], end="\n")
+                safe_cprint(text, color)
             else:
                 print(text)
             sys.stdout.flush()
@@ -239,7 +245,7 @@ async def run_game(
 
         # Judge selects a winner
         judge_model = models[round.judge]
-        cprint("\nJudge's Decision:", "green", attrs=[], end="\n")
+        safe_cprint("\nJudge's Decision:", "green")
         if judge_model == "random":
             moves = round.moves
             winning_move = random.choice(list(moves.values()))
@@ -247,33 +253,29 @@ async def run_game(
                 winning_move.played_card,
                 "Random selection",
             )
-            cprint(f"Winner: {winning_move.played_card}", "green", attrs=[], end="\n")
+            safe_cprint(f"Winner: {winning_move.played_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in moves.items():
                 if move.played_card == winning_move.played_card:
                     winning_player = game.players[player_idx]
-                    cprint(
+                    safe_cprint(
                         f"{winning_player.name} (Player {player_idx}) wins the round!",
                         "green",
-                        attrs=[],
-                        end="\n",
                     )
                     break
         else:
             winning_card, thinking = model_judge_move(game, judge_model)
             game.judge_round(winning_card, thinking)
-            cprint(f"Winner: {winning_card}", "green", attrs=[], end="\n")
+            safe_cprint(f"Winner: {winning_card}", "green")
             # Find the player who played the winning card
             for player_idx, move in round.moves.items():
                 if move.played_card == winning_card:
                     winning_player = game.players[player_idx]
-                    cprint(
+                    safe_cprint(
                         f"{winning_player.name} (Player {player_idx}) wins the round!",
                         "green",
-                        attrs=[],
-                        end="\n",
                     )
-                    cprint(f"Reasoning: {thinking}", "green", attrs=[], end="\n")
+                    safe_cprint(f"Reasoning: {thinking}", "green")
                     break
 
     # Save game (use default path if none specified)
@@ -315,15 +317,11 @@ def main():
         )
 
         # Print final scores
-        cprint(
-            "\n🎮 Game completed! Final scores:", "magenta", attrs=["bold"], end="\n"
-        )
+        safe_cprint("\n🎮 Game completed! Final scores:", "magenta", attrs=["bold"])
         for idx, player in game.players.items():
-            cprint(
+            safe_cprint(
                 f"{player.name}: {len(player.won_rounds)} wins",
                 "magenta",
-                attrs=[],
-                end="\n",
             )
 
     except Exception as e:
