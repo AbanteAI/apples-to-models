@@ -189,8 +189,10 @@ def test_player_perspective_in_history():
 
     # Player 0 should see their own move and the judge's decision
     assert_content_contains(player0_history, "Thunder")  # Their played card
-    assert "Explosions" in player0_history  # Other player's card (but not thinking)
-    assert "Thunder is naturally loud" in player0_history  # Judge's reasoning
+    assert_content_contains(player0_history, "Thunder is deafening")  # Their thinking
+    assert_content_contains(
+        player0_history, "Thunder is naturally loud"
+    )  # Judge's reasoning
     assert "Explosions are very loud" not in player0_history  # Other player's thinking
 
     # Get messages for player 1
@@ -200,9 +202,13 @@ def test_player_perspective_in_history():
     )
 
     # Player 1 should see their own move and the judge's decision
-    assert "Thunder" in player1_history  # Other player's card
     assert_content_contains(player1_history, "Explosion")  # Their played card
-    assert "Thunder is naturally loud" in player1_history  # Judge's reasoning
+    assert_content_contains(
+        player1_history, "Explosions are very loud"
+    )  # Their thinking
+    assert_content_contains(
+        player1_history, "Thunder is naturally loud"
+    )  # Judge's reasoning
     assert "Thunder is deafening" not in player1_history  # Other player's thinking
 
 
@@ -238,10 +244,16 @@ def test_judge_sees_all_thinking():
     messages = create_judge_messages(game, 1)
     judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see all players' thinking from previous round
-    assert_content_contains(judge_view, "Fire is extremely hot")
-    assert_content_contains(judge_view, "Deserts are very hot places")
+    # Judge should see players' thinking from previous rounds where they weren't judge
+    assert_content_contains(judge_view, "Ice is frozen water")  # Player 1's thinking
+    assert_content_contains(
+        judge_view, "Winter is the coldest season"
+    )  # Player 2's thinking
 
-    # Judge should see the played cards in the current round
-    assert_content_contains(judge_view, "Fire")
-    assert_content_contains(judge_view, "Desert")
+    # Judge should see the played cards in the current round (without thinking)
+    assert_content_contains(judge_view, "Fire")  # Just the card
+    assert_content_contains(judge_view, "Desert")  # Just the card
+    assert "Fire is extremely hot" not in judge_view  # No thinking in current round
+    assert (
+        "Deserts are very hot places" not in judge_view
+    )  # No thinking in current round
