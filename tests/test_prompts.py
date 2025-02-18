@@ -244,8 +244,8 @@ def test_player_perspective_in_history():
     assert "Thunder is deafening" not in player1_history  # Other player's thinking
 
 
-def test_judge_sees_all_thinking():
-    """Test that judges see all players' thinking in previous rounds"""
+def test_judge_sees_played_cards():
+    """Test that judges see played cards but not thinking"""
     game = Game.new_game(["Alice", "Bob", "Charlie"])
 
     # Set up a completed round
@@ -289,11 +289,15 @@ def test_judge_sees_all_thinking():
     messages = create_judge_messages(game, 1)
     judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see players' thinking from previous rounds where they weren't judge
-    assert_content_contains(judge_view, "Ice is frozen water")  # Player 1's thinking
-    assert_content_contains(
-        judge_view, "Winter is the coldest season"
-    )  # Player 2's thinking
+    # Judge should see played cards from previous rounds
+    assert_content_contains(judge_view, "Player 2 played: Ice")
+    assert_content_contains(judge_view, "Player 3 played: Winter")
+
+    # Judge should not see any player's thinking
+    assert "Ice is frozen water" not in judge_view
+    assert "Winter is the coldest season" not in judge_view
+    assert "Fire is extremely hot" not in judge_view
+    assert "Deserts are very hot places" not in judge_view
 
     # Judge should see the played cards in the current round (without thinking)
     assert_content_contains(judge_view, "Fire")  # Just the card
