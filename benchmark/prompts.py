@@ -1,10 +1,12 @@
-from typing import List
+from typing import List, Optional
 
 from benchmark.game import Game
 from benchmark.model_utils import Messages
 
 
-def format_scores(game: "Game", current_player: int, up_to_round: int = None) -> str:
+def format_scores(
+    game: "Game", current_player: int, up_to_round: Optional[int] = None
+) -> str:
     """Format the scores for all players, marking the current player with (you).
 
     Args:
