@@ -144,7 +144,12 @@ class Game(BaseModel):
 
         # Record the move
         current_round.moves[player_index] = PlayerMove(
-            played_card=card, thinking=thinking, drawn_card=new_card
+            played_card=card,
+            thinking=thinking,
+            drawn_card=new_card,
+            log_path=Path(
+                "benchmark/logs/dummy.log"
+            ),  # Will be overwritten by actual log path
         )
 
     def judge_round(self, winning_card: str, reasoning: str) -> None:
@@ -182,6 +187,9 @@ class Game(BaseModel):
             winning_card=winning_card,
             winning_player=winning_player,
             reasoning=reasoning,
+            log_path=Path(
+                "benchmark/logs/dummy.log"
+            ),  # Will be overwritten by actual log path
         )
 
         # Update winner's score

@@ -64,6 +64,7 @@ async def test_run_game(mock_call_model):
         tokens_completion=5,
         total_cost=0.0001,
         generation_id="test-id-run",
+        log_path=Path("tests/test.log"),
     )
     mock_call_model.return_value = mock_response
 
@@ -200,9 +201,13 @@ def test_judge_move_with_exact_cards():
             played_card="Queen Elizabeth",
             thinking="Some thinking",
             drawn_card="New Card",
+            log_path=Path("tests/test.log"),
         ),
         2: PlayerMove(
-            played_card="Dreams", thinking="Some thinking", drawn_card="New Card"
+            played_card="Dreams",
+            thinking="Some thinking",
+            drawn_card="New Card",
+            log_path=Path("tests/test.log"),
         ),
     }
     game.rounds = [round]
@@ -215,6 +220,7 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
@@ -229,6 +235,7 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-2",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
@@ -243,6 +250,7 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-3",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
@@ -257,6 +265,7 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-4",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
@@ -271,6 +280,7 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-5",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")
@@ -285,6 +295,7 @@ def test_judge_move_with_exact_cards():
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-6",
+            log_path=Path("tests/test.log"),
         )
         mock_call.return_value = mock_response
         card, thinking = model_judge_move(game, "test-model")

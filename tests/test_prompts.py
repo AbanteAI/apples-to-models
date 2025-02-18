@@ -59,11 +59,13 @@ def test_create_player_messages_with_history():
         played_card="Cheetah",
         thinking="Cheetahs are the fastest land animal",
         drawn_card="Car",
+        log_path=Path("tests/test.log"),
     )
     round1.decision = JudgeDecision(
         winning_card="Cheetah",
         winning_player=0,
         reasoning="Cheetahs are indeed the fastest",
+        log_path=Path("tests/test.log"),
     )
     game.rounds.append(round1)
 
@@ -93,10 +95,16 @@ def test_create_judge_messages_basic():
 
     # Players make moves
     round1.moves[0] = PlayerMove(
-        played_card="Mountain", thinking="Mountains are tall", drawn_card="River"
+        played_card="Mountain",
+        thinking="Mountains are tall",
+        drawn_card="River",
+        log_path=Path("tests/test.log"),
     )
     round1.moves[2] = PlayerMove(
-        played_card="Skyscraper", thinking="Skyscrapers reach high", drawn_card="House"
+        played_card="Skyscraper",
+        thinking="Skyscrapers reach high",
+        drawn_card="House",
+        log_path=Path("tests/test.log"),
     )
 
     messages = create_judge_messages(game, 1)  # Player 2 is judge
@@ -120,25 +128,38 @@ def test_create_judge_messages_with_history():
     # Set up a completed round
     round1 = Round(round_number=0, green_card="Scary", judge=0)
     round1.moves[1] = PlayerMove(
-        played_card="Ghost", thinking="Ghosts are spooky", drawn_card="Zombie"
+        played_card="Ghost",
+        thinking="Ghosts are spooky",
+        drawn_card="Zombie",
+        log_path=Path("tests/test.log"),
     )
     round1.moves[2] = PlayerMove(
-        played_card="Spider", thinking="Spiders frighten many", drawn_card="Snake"
+        played_card="Spider",
+        thinking="Spiders frighten many",
+        drawn_card="Snake",
+        log_path=Path("tests/test.log"),
     )
     round1.decision = JudgeDecision(
-        winning_card="Ghost", winning_player=1, reasoning="Ghosts are the scariest"
+        winning_card="Ghost",
+        winning_player=1,
+        reasoning="Ghosts are the scariest",
+        log_path=Path("tests/test.log"),
     )
     game.rounds.append(round1)
 
     # Start new round with different judge
     round2 = Round(round_number=1, green_card="Happy", judge=1)
     round2.moves[0] = PlayerMove(
-        played_card="Puppy", thinking="Puppies bring joy", drawn_card="Kitten"
+        played_card="Puppy",
+        thinking="Puppies bring joy",
+        drawn_card="Kitten",
+        log_path=Path("tests/test.log"),
     )
     round2.moves[2] = PlayerMove(
         played_card="Birthday",
         thinking="Birthdays are celebrations",
         drawn_card="Party",
+        log_path=Path("tests/test.log"),
     )
     game.rounds.append(round2)
 
@@ -167,13 +188,22 @@ def test_player_perspective_in_history():
     # Complete first round
     round1 = Round(round_number=0, green_card="Loud", judge=2)
     round1.moves[0] = PlayerMove(
-        played_card="Thunder", thinking="Thunder is deafening", drawn_card="Lightning"
+        played_card="Thunder",
+        thinking="Thunder is deafening",
+        drawn_card="Lightning",
+        log_path=Path("tests/test.log"),
     )
     round1.moves[1] = PlayerMove(
-        played_card="Explosion", thinking="Explosions are very loud", drawn_card="Bomb"
+        played_card="Explosion",
+        thinking="Explosions are very loud",
+        drawn_card="Bomb",
+        log_path=Path("tests/test.log"),
     )
     round1.decision = JudgeDecision(
-        winning_card="Thunder", winning_player=0, reasoning="Thunder is naturally loud"
+        winning_card="Thunder",
+        winning_player=0,
+        reasoning="Thunder is naturally loud",
+        log_path=Path("tests/test.log"),
     )
     game.rounds.append(round1)
 
@@ -219,25 +249,38 @@ def test_judge_sees_all_thinking():
     # Set up a completed round
     round1 = Round(round_number=0, green_card="Cold", judge=0)
     round1.moves[1] = PlayerMove(
-        played_card="Ice", thinking="Ice is frozen water", drawn_card="Snow"
+        played_card="Ice",
+        thinking="Ice is frozen water",
+        drawn_card="Snow",
+        log_path=Path("tests/test.log"),
     )
     round1.moves[2] = PlayerMove(
-        played_card="Winter", thinking="Winter is the coldest season", drawn_card="Fall"
+        played_card="Winter",
+        thinking="Winter is the coldest season",
+        drawn_card="Fall",
+        log_path=Path("tests/test.log"),
     )
     round1.decision = JudgeDecision(
         winning_card="Ice",
         winning_player=1,
         reasoning="Ice is literally frozen and therefore the coldest",
+        log_path=Path("tests/test.log"),
     )
     game.rounds.append(round1)
 
     # Start new round
     round2 = Round(round_number=1, green_card="Hot", judge=1)
     round2.moves[0] = PlayerMove(
-        played_card="Fire", thinking="Fire is extremely hot", drawn_card="Sun"
+        played_card="Fire",
+        thinking="Fire is extremely hot",
+        drawn_card="Sun",
+        log_path=Path("tests/test.log"),
     )
     round2.moves[2] = PlayerMove(
-        played_card="Desert", thinking="Deserts are very hot places", drawn_card="Beach"
+        played_card="Desert",
+        thinking="Deserts are very hot places",
+        drawn_card="Beach",
+        log_path=Path("tests/test.log"),
     )
     game.rounds.append(round2)
 
