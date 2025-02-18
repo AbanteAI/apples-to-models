@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from termcolor import cprint  # type: ignore
 
-from benchmark.game import Game
+from benchmark.game import Game, JudgeDecision
 from benchmark.game_report import save_html_report
 
 # Create games directory if it doesn't exist
