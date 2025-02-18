@@ -1,3 +1,8 @@
+
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+)
+
 from benchmark.game import Game, JudgeDecision, PlayerMove, Round
 from benchmark.prompts import (
     JUDGE_PROMPT,
@@ -5,6 +10,23 @@ from benchmark.prompts import (
     create_judge_messages,
     create_player_messages,
 )
+
+
+def get_message_content(msg: ChatCompletionMessageParam) -> str:
+    """Helper function to safely get message content as string."""
+    content = msg.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, (list, tuple)):
+        return " ".join(str(part) for part in content)
+    return str(content)
+
+
+def assert_content_contains(content: str, substring: str) -> None:
+    """Helper function to assert string containment with proper type handling."""
+    assert substring in content, f"Expected '{substring}' in '{content}'"
 
 
 def test_create_player_messages_basic():
@@ -17,14 +39,15 @@ def test_create_player_messages_basic():
     )
 
     # Check system message
-    assert "You are playing Apples to Apples" in messages.messages[0]["content"]
+    system_content = get_message_content(messages.messages[0])
+    assert_content_contains(system_content, "You are playing Apples to Apples")
 
     # Check current round prompt
-    last_message = messages.messages[-1]["content"]
-    assert "You are Player 1" in last_message
-    assert "The green card is: Colorful" in last_message
-    assert "Rainbow, Sunset, Paint" in last_message
-    assert PLAYER_PROMPT in last_message
+    last_content = get_message_content(messages.messages[-1])
+    assert_content_contains(last_content, "You are Player 1")
+    assert_content_contains(last_content, "The green card is: Colorful")
+    assert_content_contains(last_content, "Rainbow, Sunset, Paint")
+    assert_content_contains(last_content, PLAYER_PROMPT)
 
 
 def test_create_player_messages_with_history():
@@ -51,17 +74,17 @@ def test_create_player_messages_with_history():
     messages = create_player_messages(game, 0, "Strong", ["Elephant", "Bodybuilder"])
 
     # Check history is included
-    history = " ".join(msg["content"] for msg in messages.messages)
-    assert "Round 1" in history
-    assert "Fast" in history
-    assert "Cheetah" in history
-    assert "Cheetahs are the fastest land animal" in history
-    assert "Cheetahs are indeed the fastest" in history
+    history = " ".join(get_message_content(msg) for msg in messages.messages)
+    assert_content_contains(history, "Round 1")
+    assert_content_contains(history, "Fast")
+    assert_content_contains(history, "Cheetah")
+    assert_content_contains(history, "Cheetahs are the fastest land animal")
+    assert_content_contains(history, "Cheetahs are indeed the fastest")
 
     # Check current round prompt
-    last_message = messages.messages[-1]["content"]
-    assert "Strong" in last_message
-    assert "Elephant, Bodybuilder" in last_message
+    last_content = get_message_content(messages.messages[-1])
+    assert_content_contains(last_content, "Strong")
+    assert_content_contains(last_content, "Elephant, Bodybuilder")
 
 
 def test_create_judge_messages_basic():
@@ -80,14 +103,15 @@ def test_create_judge_messages_basic():
     messages = create_judge_messages(game, 1)  # Player 2 is judge
 
     # Check system message
-    assert "You are playing Apples to Apples" in messages.messages[0]["content"]
+    system_content = get_message_content(messages.messages[0])
+    assert_content_contains(system_content, "You are playing Apples to Apples")
 
     # Check current round prompt
-    last_message = messages.messages[-1]["content"]
-    assert "You are the judge" in last_message
-    assert "Mountain" in last_message
-    assert "Skyscraper" in last_message
-    assert JUDGE_PROMPT in last_message
+    last_content = get_message_content(messages.messages[-1])
+    assert_content_contains(last_content, "You are the judge")
+    assert_content_contains(last_content, "Mountain")
+    assert_content_contains(last_content, "Skyscraper")
+    assert_content_contains(last_content, JUDGE_PROMPT)
 
 
 def test_create_judge_messages_with_history():
@@ -122,19 +146,19 @@ def test_create_judge_messages_with_history():
     messages = create_judge_messages(game, 1)
 
     # Check history is included
-    history = " ".join(msg["content"] for msg in messages.messages)
-    assert "Round 1" in history
-    assert "Scary" in history
-    assert "Ghost" in history
-    assert "Spider" in history
-    assert "Ghosts are the scariest" in history
+    history = " ".join(get_message_content(msg) for msg in messages.messages)
+    assert_content_contains(history, "Round 1")
+    assert_content_contains(history, "Scary")
+    assert_content_contains(history, "Ghost")
+    assert_content_contains(history, "Spider")
+    assert_content_contains(history, "Ghosts are the scariest")
 
     # Check current round
-    last_message = messages.messages[-1]["content"]
-    assert "Round 2" in last_message
-    assert "Happy" in last_message
-    assert "Puppy" in last_message
-    assert "Birthday" in last_message
+    last_content = get_message_content(messages.messages[-1])
+    assert_content_contains(last_content, "Round 2")
+    assert_content_contains(last_content, "Happy")
+    assert_content_contains(last_content, "Puppy")
+    assert_content_contains(last_content, "Birthday")
 
 
 def test_player_perspective_in_history():
@@ -156,19 +180,23 @@ def test_player_perspective_in_history():
 
     # Get messages for player 0
     player0_messages = create_player_messages(game, 0, "Bright", ["Sun", "Star"])
-    player0_history = " ".join(msg["content"] for msg in player0_messages.messages)
+    player0_history = " ".join(
+        get_message_content(msg) for msg in player0_messages.messages
+    )
 
     # Player 0 should see their own thinking but not player 1's
-    assert "Thunder is deafening" in player0_history
+    assert_content_contains(player0_history, "Thunder is deafening")
     assert "Explosions are very loud" not in player0_history
 
     # Get messages for player 1
     player1_messages = create_player_messages(game, 1, "Bright", ["Moon", "Fire"])
-    player1_history = " ".join(msg["content"] for msg in player1_messages.messages)
+    player1_history = " ".join(
+        get_message_content(msg) for msg in player1_messages.messages
+    )
 
     # Player 1 should see their own thinking but not player 0's
     assert "Thunder is deafening" not in player1_history
-    assert "Explosions are very loud" in player1_history
+    assert_content_contains(player1_history, "Explosions are very loud")
 
 
 def test_judge_sees_all_thinking():
@@ -186,8 +214,8 @@ def test_judge_sees_all_thinking():
     game.rounds.append(round1)
 
     messages = create_judge_messages(game, 0)
-    judge_view = " ".join(msg["content"] for msg in messages.messages)
+    judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
     # Judge should see all players' thinking
-    assert "Ice is frozen water" in judge_view
-    assert "Winter is the coldest season" in judge_view
+    assert_content_contains(judge_view, "Ice is frozen water")
+    assert_content_contains(judge_view, "Winter is the coldest season")
