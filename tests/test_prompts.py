@@ -6,10 +6,10 @@ from openai.types.chat import (
 
 from benchmark.game import Game, JudgeDecision, PlayerMove, Round
 from benchmark.prompts import (
-    JUDGE_PROMPT,
-    PLAYER_PROMPT,
     create_judge_messages,
     create_player_messages,
+    get_judge_prompt_template,
+    get_player_prompt_template,
 )
 
 
@@ -48,7 +48,7 @@ def test_create_player_messages_basic():
     assert_content_contains(last_content, "You are Player 1")
     assert_content_contains(last_content, "The green card is: Colorful")
     assert_content_contains(last_content, "Rainbow, Sunset, Paint")
-    assert_content_contains(last_content, PLAYER_PROMPT)
+    assert_content_contains(last_content, get_player_prompt_template())
 
 
 def test_create_player_messages_with_history():
@@ -120,7 +120,7 @@ def test_create_judge_messages_basic():
     assert_content_contains(last_content, "You are the judge")
     assert_content_contains(last_content, "Mountain")
     assert_content_contains(last_content, "Skyscraper")
-    assert_content_contains(last_content, JUDGE_PROMPT)
+    assert_content_contains(last_content, get_judge_prompt_template())
 
 
 def test_create_judge_messages_with_history():
