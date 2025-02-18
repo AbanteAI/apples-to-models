@@ -37,7 +37,7 @@ def create_player_messages(
                 # Show the hand and prompt before showing player's thinking
                 messages.add_user(
                     f"You are Player {pid + 1}. The green card is: {round.green_card}\n"
-                    f"Your hand (red cards) contains: {', '.join(game.hands[pid])}\n"
+                    f"Your hand (red cards) contains: {', '.join(game.players[pid].hand)}\n"
                     "Which card from your hand best matches this green card? "
                     "Respond with your reasoning followed by the card name, separated by ' | '. "
                     "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
@@ -103,7 +103,7 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
                 # Show the hand and prompt before showing judge's thinking
                 messages.add_user(
                     f"You are Player {player_idx + 1}. The green card is: {round.green_card}\n"
-                    f"Your hand (red cards) contains: {', '.join(game.hands[player_idx])}\n"
+                    f"Your hand (red cards) contains: {', '.join(game.players[player_idx].hand)}\n"
                     "Which card from your hand best matches this green card? "
                     "Respond with your reasoning followed by the card name, separated by ' | '. "
                     "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
