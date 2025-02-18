@@ -1,13 +1,14 @@
-import pytest
-from pathlib import Path
-import tempfile
 import json
-from unittest.mock import patch
 import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
-from benchmark.run import create_parser, validate_args, run_game, main, model_judge_move
-from benchmark.game import Game, Round, PlayerMove
+import pytest
+
+from benchmark.game import Game, PlayerMove, Round
 from benchmark.model_utils import ModelResponse
+from benchmark.run import create_parser, main, model_judge_move, run_game, validate_args
 
 
 def test_argument_validation():
