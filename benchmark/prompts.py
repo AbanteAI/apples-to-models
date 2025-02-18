@@ -3,11 +3,30 @@ from typing import List
 from benchmark.game import Game
 from benchmark.model_utils import Messages
 
-SYSTEM_MESSAGE = (
-    "You are playing Apples to Apples, a word association game. "
-    "In each round, there is a green card (an adjective) and players play red cards (nouns) "
-    "that they think best match the green card. The judge picks the best match."
-)
+
+def format_scores(game: "Game", current_player: int) -> str:
+    """Format the scores for all players, marking the current player with (you)."""
+    scores = []
+    for idx, player in game.players.items():
+        score = len(player.won_rounds)
+        player_text = f"Player {idx + 1}: {score}"
+        if idx == current_player:
+            player_text += " (you)"
+        scores.append(player_text)
+    return "\n".join(scores)
+
+
+def create_system_message(total_players: int, player_number: int) -> str:
+    """Create the system message with player count information."""
+    return (
+        "You are playing Apples to Apples, a word association game. "
+        f"There are {total_players} players in the game, and you are Player {player_number}. "
+        "In each round, there is a green card (an adjective) and players play red cards (nouns) "
+        "that they think best match the green card. The judge picks the best match."
+    )
+
+
+SYSTEM_MESSAGE = create_system_message(1, 1)  # Default values, will be updated per game
 
 
 def format_cards_list(cards: List[str]) -> str:
@@ -68,7 +87,7 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         Messages object containing the system and historical messages
     """
     messages = Messages()
-    messages.add_system(SYSTEM_MESSAGE)
+    messages.add_system(create_system_message(len(game.players), player_idx + 1))
 
     # Add game history for all completed rounds
     for round in game.rounds[:-1]:
@@ -118,6 +137,9 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
                     f"Their reasoning: {round.decision.reasoning}"
                 )
+
+            # Show current scores after the decision
+            messages.add_user(f"\nCurrent Scores:\n{format_scores(game, player_idx)}\n")
 
     return messages
 
