@@ -11,11 +11,22 @@ from benchmark.game import Game
 
 Color = Literal["red", "green", "yellow", "blue", "magenta", "cyan", "white", "grey"]
 
+VALID_COLORS = {"red", "green", "yellow", "blue", "magenta", "cyan", "white", "grey"}
+VALID_ATTRS = {"bold", "dark", "underline", "blink", "reverse", "concealed"}
+
 
 def safe_cprint(
-    text: str, color: Color, attrs: List[str] = [], end: str = "\n"
+    text: str, color: str, attrs: List[str] | None = None, end: str = "\n"
 ) -> None:
     """Type-safe wrapper for cprint"""
+    if color not in VALID_COLORS:
+        raise ValueError(f"Invalid color: {color}. Must be one of {VALID_COLORS}")
+    if attrs:
+        invalid_attrs = set(attrs) - VALID_ATTRS
+        if invalid_attrs:
+            raise ValueError(
+                f"Invalid attributes: {invalid_attrs}. Must be from {VALID_ATTRS}"
+            )
     cprint(text, color, attrs=attrs, end=end)
 
 
