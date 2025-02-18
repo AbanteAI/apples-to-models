@@ -1,4 +1,3 @@
-
 from benchmark.game import Game, JudgeDecision, PlayerMove, Round
 from benchmark.prompts import (
     JUDGE_PROMPT,
