@@ -150,10 +150,6 @@ def get_generation_stats(generation_id: str, api_key: str) -> dict:
         headers=headers,
     )
 
-    # Debug logging
-    print(f"Generation stats response: {stats_response.status_code}")
-    print(f"Response content: {stats_response.text}")
-
     stats_data = stats_response.json()
     if "data" not in stats_data:
         raise ValueError(f"Stats data not available in response: {stats_response.text}")
