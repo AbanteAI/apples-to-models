@@ -119,6 +119,14 @@ class ModelLogger:
         if not self.messages:
             raise ValueError("Messages not set before writing log")
 
+        # Ensure we have valid timestamps
+        if self.start_time == 0:
+            self.start_time = time.time()
+        if self.end_time == 0:
+            self.end_time = time.time()
+        if self.end_time < self.start_time:
+            self.end_time = self.start_time
+
         with open(log_file, "w", encoding="utf-8") as f:
             # Write header with all metadata
             duration = round(self.end_time - self.start_time, 3)
