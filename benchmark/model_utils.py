@@ -182,10 +182,11 @@ async def get_generation_stats(generation_id: str, api_key: str) -> dict:
     """
     headers = {"Authorization": f"Bearer {api_key}"}
     async with aiohttp.ClientSession() as session:
-        async with session.get(
+        response = await session.get(
             f"https://openrouter.ai/api/v1/generation?id={generation_id}",
             headers=headers,
-        ) as response:
+        )
+        async with response:
             stats_data = await response.json()
             if "data" not in stats_data:
                 raise ValueError(
