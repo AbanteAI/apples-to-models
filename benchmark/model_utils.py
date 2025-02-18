@@ -1,8 +1,6 @@
-import asyncio
 import os
 import time
 from datetime import datetime
-from functools import wraps
 from pathlib import Path
 from typing import Iterator, List, Optional
 
@@ -17,28 +15,7 @@ from openai.types.chat import (
 )
 from pydantic import BaseModel
 
-
-def async_retry(tries=8, delay=0.1, backoff=2):
-    """Retry decorator for async functions"""
-
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            _tries, _delay = tries, delay
-            while _tries > 0:
-                try:
-                    return await func(*args, **kwargs)
-                except Exception:
-                    _tries -= 1
-                    if _tries == 0:
-                        raise
-                    await asyncio.sleep(_delay)
-                    _delay *= backoff
-            return None
-
-        return wrapper
-
-    return decorator
+from benchmark.utils import async_retry
 
 
 class ModelResponse(BaseModel):

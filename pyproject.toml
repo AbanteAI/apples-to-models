@@ -28,3 +28,12 @@ combine-as-imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.pyright]
+include = ["benchmark", "tests"]
+extraPaths = ["."]
+venvPath = "."
+venv = ".venv"
+reportMissingImports = true
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
