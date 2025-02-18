@@ -179,28 +179,20 @@ def call_model(model: str, messages: Messages) -> ModelResponse:
 
         stats_data = stats_response.json()
         if "data" not in stats_data:
-            # If stats are not available, return with default values
-            model_response = ModelResponse(
-                content=content,
-                tokens_prompt=0,  # Will update when stats are available
-                tokens_completion=0,  # Will update when stats are available
-                total_cost=0.0,  # Will update when stats are available
-                generation_id=generation_id,
-            )
-        else:
-            stats = stats_data["data"]
-            model_response = ModelResponse(
-                content=content,
-                tokens_prompt=stats["tokens_prompt"],
-                tokens_completion=stats["tokens_completion"],
-                total_cost=stats["total_cost"],
-                generation_id=generation_id,
+            raise ValueError(
+                f"Stats data not available in response: {stats_response.text}"
             )
 
+        stats = stats_data["data"]
+        model_response = ModelResponse(
+            content=content,
+            tokens_prompt=stats["tokens_prompt"],
+            tokens_completion=stats["tokens_completion"],
+            total_cost=stats["total_cost"],
+            generation_id=generation_id,
+        )
+
         logger.set_response(content)
-        if "data" in stats_data:
-            logger.set_cost(stats_data["data"]["total_cost"])
-        else:
-            logger.set_cost(0.0)
+        logger.set_cost(stats["total_cost"])
 
         return model_response
