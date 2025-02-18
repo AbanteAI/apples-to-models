@@ -21,5 +21,16 @@ def test_call_model():
     messages = Messages()
     messages.add_user("What is 2 + 2?")
     response = call_model("openai/gpt-4o-mini-2024-07-18", messages)
-    assert isinstance(response, str)
-    assert len(response) > 0
+
+    # Check response structure
+    assert isinstance(response.content, str)
+    assert len(response.content) > 0
+    assert isinstance(response.tokens_prompt, int)
+    assert isinstance(response.tokens_completion, int)
+    assert isinstance(response.total_cost, float)
+    assert isinstance(response.generation_id, str)
+
+    # Basic validation of values
+    assert response.tokens_prompt > 0
+    assert response.tokens_completion > 0
+    assert response.total_cost > 0
