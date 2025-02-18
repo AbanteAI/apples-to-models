@@ -93,29 +93,28 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         )
 
         # Show played cards and thinking
+        played_cards = []
         for pid, move in round.moves.items():
             if pid == player_idx:
-                # Show the player's own move
+                # Show the player's own move and thinking
                 messages.add_user(
                     create_player_prompt(pid, round.green_card, game.players[pid].hand)
                 )
                 messages.add_assistant(f"{move.thinking} | {move.played_card}")
-            else:
-                # Show other players' moves
-                if is_judge:
-                    messages.add_user(
-                        f"Player {pid + 1} played: {move.played_card}\n"
-                        f"Their thinking: {move.thinking}"
-                    )
-                else:
-                    messages.add_user(f"Player {pid + 1} played: {move.played_card}")
+            played_cards.append(move.played_card)
+
+        # Show all played cards without revealing who played them
+        if player_idx != round.judge:
+            messages.add_user(
+                f"The played red cards are:\n{format_cards_list(played_cards)}"
+            )
 
         # Show judge's decision
         if round.decision:
+            winning_player = round.decision.winning_player
             if round.judge == player_idx:
                 if is_judge:
                     # Show the cards and prompt before showing judge's decision
-                    played_cards = [move.played_card for move in round.moves.values()]
                     messages.add_user(
                         create_judge_prompt(
                             round.round_number, round.green_card, played_cards
@@ -126,12 +125,13 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     )
                 else:
                     messages.add_user(
-                        f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
+                        f"You (as judge) selected Player {winning_player + 1}'s card '{round.decision.winning_card}' as the winner.\n"
                         f"Your reasoning: {round.decision.reasoning}"
                     )
             else:
                 messages.add_user(
-                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
+                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner "
+                    f"(played by Player {winning_player + 1}).\n"
                     f"Their reasoning: {round.decision.reasoning}"
                 )
 
