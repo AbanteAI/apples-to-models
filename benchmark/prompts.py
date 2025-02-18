@@ -3,6 +3,20 @@ from typing import List
 from benchmark.game import Game
 from benchmark.model_utils import Messages
 
+PLAYER_PROMPT = (
+    "Which card from your hand best matches this green card? "
+    "Respond with your reasoning followed by the card name, separated by ' | '. "
+    "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
+    "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
+)
+
+JUDGE_PROMPT = (
+    "Which red card best matches the green card? "
+    "Respond with your reasoning followed by the card name, separated by ' | '. "
+    "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
+    "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
+)
+
 
 def create_player_messages(
     game: "Game", player_idx: int, green_card: str, hand: List[str]
@@ -38,10 +52,7 @@ def create_player_messages(
                 messages.add_user(
                     f"You are Player {pid + 1}. The green card is: {round.green_card}\n"
                     f"Your hand (red cards) contains: {', '.join(game.players[pid].hand)}\n"
-                    "Which card from your hand best matches this green card? "
-                    "Respond with your reasoning followed by the card name, separated by ' | '. "
-                    "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
-                    "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
+                    f"{PLAYER_PROMPT}"
                 )
                 # Show player their own thinking in the reasoning | card format
                 messages.add_assistant(f"{move.thinking} | {move.played_card}")
@@ -65,10 +76,7 @@ def create_player_messages(
     messages.add_user(
         f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
         f"Your hand (red cards) contains: {', '.join(hand)}\n"
-        "Which card from your hand best matches this green card? "
-        "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
-        "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
+        f"{PLAYER_PROMPT}"
     )
 
     return messages
@@ -104,10 +112,7 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
                 messages.add_user(
                     f"You are Player {player_idx + 1}. The green card is: {round.green_card}\n"
                     f"Your hand (red cards) contains: {', '.join(game.players[player_idx].hand)}\n"
-                    "Which card from your hand best matches this green card? "
-                    "Respond with your reasoning followed by the card name, separated by ' | '. "
-                    "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
-                    "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
+                    f"{PLAYER_PROMPT}"
                 )
                 # Show judge's own thinking in the reasoning | card format
                 messages.add_assistant(f"{move.thinking} | {move.played_card}")
@@ -127,10 +132,7 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
                     f"Current Round {round.round_number + 1}\n"
                     f"You are the judge. The green card is: {round.green_card}\n"
                     f"The played red cards are:\n{cards_list}\n"
-                    "Which red card best matches the green card? "
-                    "Respond with your reasoning followed by the card name, separated by ' | '. "
-                    "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
-                    "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
+                    f"{JUDGE_PROMPT}"
                 )
                 messages.add_assistant(
                     f"{round.decision.reasoning} | {round.decision.winning_card}"
@@ -150,10 +152,7 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
         f"Current Round {current_round.round_number + 1}\n"
         f"You are the judge. The green card is: {current_round.green_card}\n"
         f"The played red cards are:\n{cards_list}\n"
-        "Which red card best matches the green card? "
-        "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
-        "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
+        f"{JUDGE_PROMPT}"
     )
 
     return messages
