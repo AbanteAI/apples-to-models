@@ -90,12 +90,14 @@ async def test_run_game():
 
     mock_chat.completions.create = create_completion
 
-    mock_stats = {
-        "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
-    }
+    async def mock_get_stats(*args, **kwargs):
+        return {
+            "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
+        }
+
     with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
         "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
-    ), patch("benchmark.model_utils.get_generation_stats", return_value=mock_stats):
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats):
         game_coro = run_game(num_rounds=2, num_players=2, models=["random", "gpt-4"])
         game = await game_coro
         assert len(game.rounds) == 2
@@ -359,12 +361,18 @@ async def test_model_log_preservation():
         mock_client = AsyncMock()
         mock_client.chat = mock_chat
 
-        mock_stats = {
-            "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
-        }
+        async def mock_get_stats(*args, **kwargs):
+            return {
+                "data": {
+                    "tokens_prompt": 10,
+                    "tokens_completion": 5,
+                    "total_cost": 0.0001,
+                }
+            }
+
         with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
             "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
-        ), patch("benchmark.model_utils.get_generation_stats", return_value=mock_stats):
+        ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats):
             game = await run_game(
                 num_rounds=2,
                 num_players=2,
@@ -448,12 +456,14 @@ async def test_judge_move_with_exact_cards():
     mock_client = AsyncMock()
     mock_client.chat = mock_chat
 
-    mock_stats = {
-        "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
-    }
+    async def mock_get_stats(*args, **kwargs):
+        return {
+            "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
+        }
+
     with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
         "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
-    ), patch("benchmark.model_utils.get_generation_stats", return_value=mock_stats):
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
