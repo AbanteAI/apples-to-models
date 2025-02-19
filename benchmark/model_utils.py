@@ -169,11 +169,17 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     load_dotenv()  # Load environment variables
     api_key = os.getenv("OPEN_ROUTER_KEY")
+    start_time = time.time()
+
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        # For tests, we expect the call to be mocked
+        # This is just a fallback in case it's not
+        raise ValueError("Model call not mocked in test")
+
     if not api_key:
         raise ValueError("OPEN_ROUTER_KEY environment variable is not set")
 
     client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
-    start_time = time.time()
 
     # Make the initial completion request
     response = await client.chat.completions.create(

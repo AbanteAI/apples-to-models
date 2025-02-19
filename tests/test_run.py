@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -55,11 +55,11 @@ def test_argument_validation():
 
 
 @pytest.mark.asyncio
-@patch("benchmark.model_utils.call_model", new_callable=AsyncMock)
+@patch("benchmark.run.call_model")  # Patch before it's imported in run.py
 async def test_run_game(mock_call_model):
     # Mock model responses
     mock_response = ModelResponse(
-        content="Test Card|Because it matches",
+        content='{"reasoning": "Good thinking", "card": "Test Card"}',
         model="test-model",
         tokens_prompt=10,
         tokens_completion=5,
@@ -266,7 +266,8 @@ def test_parse_model_response():
 
 
 @pytest.mark.asyncio
-async def test_model_log_preservation():
+@patch("benchmark.run.call_model")  # Patch before it's imported in run.py
+async def test_model_log_preservation(mock_call_model):
     """Test that model logs are preserved when model responses are invalid"""
     # Create a temporary directory for the game
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -317,54 +318,61 @@ async def test_model_log_preservation():
         ]
         response_index = 0
 
-        async def mock_call_model(*args, **kwargs):
+        # Set up the mock to cycle through responses
+        async def cycle_responses(*args, **kwargs):
             nonlocal response_index
             response = responses[response_index]
             response_index = (response_index + 1) % len(responses)
             return response
 
-        # Run a game with the mock
-        with patch("benchmark.model_utils.call_model", new=mock_call_model):
-            game = await run_game(
-                num_rounds=2,
-                num_players=2,
-                models=["gpt-4", "gpt-4"],  # Make both players use the model
-                save_game_path=os.path.join(temp_dir, "game_state.json"),
-            )
+        mock_call_model.side_effect = cycle_responses
+        game = await run_game(
+            num_rounds=2,
+            num_players=2,
+            models=["gpt-4", "gpt-4"],  # Make both players use the model
+            save_game_path=os.path.join(temp_dir, "game_state.json"),
+        )
 
-            # Check that both rounds were completed
-            assert len(game.rounds) == 2
+        # Check that both rounds were completed
+        assert len(game.rounds) == 2
 
-            # Check first round (valid response)
-            round1 = game.rounds[0]
-            if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
-                move = round1.moves[0]
-                assert move.log_path == player_valid_response.log_path
-                assert "Silent Movies" in move.played_card
-                assert "Good thinking" in move.thinking
+        # Check first round (valid response)
+        round1 = game.rounds[0]
+        if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
+            move = round1.moves[0]
+            assert move.log_path == player_valid_response.log_path
+            assert "Silent Movies" in move.played_card
+            assert "Good thinking" in move.thinking
+        elif round1.decision:  # If player 1 was judge
+            assert round1.decision.log_path == judge_response.log_path
+            assert "Good choice" in round1.decision.reasoning
 
-            # Check second round (invalid response)
-            round2 = game.rounds[1]
-            if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
-                move = round2.moves[0]
-                assert move.log_path == player_invalid_response.log_path
-                assert "Random selection" in move.thinking
-                assert "Invalid JSON response" in move.thinking
+        # Check second round (invalid response)
+        round2 = game.rounds[1]
+        if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
+            move = round2.moves[0]
+            assert move.log_path == player_invalid_response.log_path
+            assert "Random selection" in move.thinking
+            assert "Invalid JSON response" in move.thinking
+        elif round2.decision:  # If player 1 was judge
+            assert round2.decision.log_path == judge_response.log_path
+            assert "Good choice" in round2.decision.reasoning
 
-            # Verify that the HTML report contains links to both logs
-            state_path = os.path.join(temp_dir, "game_state.json")
-            report_path = os.path.splitext(state_path)[0] + ".html"
-            with open(report_path) as f:
-                report_content = f.read()
-                assert str(player_valid_response.log_path) in report_content
-                assert str(player_invalid_response.log_path) in report_content
-                assert (
-                    "no_log.txt" not in report_content
-                )  # Should not use no_log.txt for model failures
+        # Verify that the HTML report contains links to both logs
+        state_path = os.path.join(temp_dir, "game_state.json")
+        report_path = os.path.splitext(state_path)[0] + ".html"
+        with open(report_path) as f:
+            report_content = f.read()
+            assert str(player_valid_response.log_path) in report_content
+            assert str(player_invalid_response.log_path) in report_content
+            assert (
+                "no_log.txt" not in report_content
+            )  # Should not use no_log.txt for model failures
 
 
 @pytest.mark.asyncio
-async def test_judge_move_with_exact_cards():
+@patch("benchmark.run.call_model")  # Patch before it's imported in run.py
+async def test_judge_move_with_exact_cards(mock_call_model):
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
     game = Game.new_game(["Player 1", "Player 2", "Player 3"], total_rounds=6)
@@ -392,109 +400,114 @@ async def test_judge_move_with_exact_cards():
     game.rounds = [round]
 
     # Test case 1: Model responds with proper JSON format
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "After careful consideration", "card": "Queen Elizabeth"}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id",
-            log_path=Path("tests/test.log"),
-        )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = await model_judge_move(game, "test-model")
-        assert card == "Queen Elizabeth"
-        assert thinking == "After careful consideration"
-        assert log_path == Path("tests/test.log")
+    mock_response = ModelResponse(
+        content='{"reasoning": "After careful consideration", "card": "Queen Elizabeth"}',
+        model="test-model",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id",
+        log_path=Path("tests/test.log"),
+    )
+    mock_call_model.return_value = mock_response
+    card, thinking, log_path = await model_judge_move(game, "test-model")
+    assert card == "Queen Elizabeth"
+    assert thinking == "After careful consideration"
+    assert log_path == Path("tests/test.log")
+    mock_call_model.assert_called_once()
 
     # Test case 2: Model responds with proper JSON format and punctuation
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "She\'s very graceful!", "card": "Queen Elizabeth."}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-2",
-            log_path=Path("tests/test.log"),
-        )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = await model_judge_move(game, "test-model")
-        assert card == "Queen Elizabeth"
-        assert thinking == "She's very graceful!"
-        assert log_path == Path("tests/test.log")
+    mock_response = ModelResponse(
+        content='{"reasoning": "She\'s very graceful!", "card": "Queen Elizabeth."}',
+        model="test-model",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id-2",
+        log_path=Path("tests/test.log"),
+    )
+    mock_call_model.reset_mock()
+    mock_call_model.return_value = mock_response
+    card, thinking, log_path = await model_judge_move(game, "test-model")
+    assert card == "Queen Elizabeth"
+    assert thinking == "She's very graceful!"
+    assert log_path == Path("tests/test.log")
+    mock_call_model.assert_called_once()
 
     # Test case 3: Model responds with proper JSON format and different case
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "Most graceful choice", "card": "QUEEN ELIZABETH"}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-3",
-            log_path=Path("tests/test.log"),
-        )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = await model_judge_move(game, "test-model")
-        assert card == "Queen Elizabeth"
-        assert thinking == "Most graceful choice"
-        assert log_path == Path("tests/test.log")
+    mock_response = ModelResponse(
+        content='{"reasoning": "Most graceful choice", "card": "QUEEN ELIZABETH"}',
+        model="test-model",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id-3",
+        log_path=Path("tests/test.log"),
+    )
+    mock_call_model.reset_mock()
+    mock_call_model.return_value = mock_response
+    card, thinking, log_path = await model_judge_move(game, "test-model")
+    assert card == "Queen Elizabeth"
+    assert thinking == "Most graceful choice"
+    assert log_path == Path("tests/test.log")
+    mock_call_model.assert_called_once()
 
     # Test case 4: Model responds with invalid JSON
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content="Queen Elizabeth is the most graceful choice",
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-4",
-            log_path=Path("tests/test.log"),
-        )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = await model_judge_move(game, "test-model")
-        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert "Model failed to provide valid response" in thinking
-        assert "Invalid JSON response" in thinking
-        assert mock_response.content in thinking  # Raw response should be included
-        assert log_path == Path("tests/test.log")  # Log path should be preserved
+    mock_response = ModelResponse(
+        content="Queen Elizabeth is the most graceful choice",
+        model="test-model",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id-4",
+        log_path=Path("tests/test.log"),
+    )
+    mock_call_model.reset_mock()
+    mock_call_model.return_value = mock_response
+    card, thinking, log_path = await model_judge_move(game, "test-model")
+    assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+    assert "Model failed to provide valid response" in thinking
+    assert "Invalid JSON response" in thinking
+    assert mock_response.content in thinking  # Raw response should be included
+    assert log_path == Path("tests/test.log")  # Log path should be preserved
+    mock_call_model.assert_called_once()
 
     # Test case 5: Model responds with JSON missing required fields
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"thinking": "Most graceful choice"}',  # Missing "card" field
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-5",
-            log_path=Path("tests/test.log"),
-        )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = await model_judge_move(game, "test-model")
-        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert "Model failed to provide valid response" in thinking
-        assert "Response must contain 'reasoning' and 'card' fields" in thinking
-        assert mock_response.content in thinking  # Raw response should be included
-        assert log_path == Path("tests/test.log")  # Log path should be preserved
+    mock_response = ModelResponse(
+        content='{"thinking": "Most graceful choice"}',  # Missing "card" field
+        model="test-model",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id-5",
+        log_path=Path("tests/test.log"),
+    )
+    mock_call_model.reset_mock()
+    mock_call_model.return_value = mock_response
+    card, thinking, log_path = await model_judge_move(game, "test-model")
+    assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+    assert "Model failed to provide valid response" in thinking
+    assert "Response must contain 'reasoning' and 'card' fields" in thinking
+    assert mock_response.content in thinking  # Raw response should be included
+    assert log_path == Path("tests/test.log")  # Log path should be preserved
+    mock_call_model.assert_called_once()
 
     # Test case 6: Model responds with invalid card in JSON
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "This is graceful", "card": "The Moon"}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-6",
-            log_path=Path("tests/test.log"),
-        )
-        mock_call.return_value = mock_response
-        card, thinking, log_path = await model_judge_move(game, "test-model")
-        assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert "Model failed to provide valid response" in thinking
-        assert "Could not find matching card" in thinking
-        assert mock_response.content in thinking  # Raw response should be included
-        assert log_path == Path("tests/test.log")  # Log path should be preserved
+    mock_response = ModelResponse(
+        content='{"reasoning": "This is graceful", "card": "The Moon"}',
+        model="test-model",
+        tokens_prompt=10,
+        tokens_completion=5,
+        total_cost=0.0001,
+        generation_id="test-id-6",
+        log_path=Path("tests/test.log"),
+    )
+    mock_call_model.reset_mock()
+    mock_call_model.return_value = mock_response
+    card, thinking, log_path = await model_judge_move(game, "test-model")
+    assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
+    assert "Model failed to provide valid response" in thinking
+    assert "Could not find matching card" in thinking
+    assert mock_response.content in thinking  # Raw response should be included
+    assert log_path == Path("tests/test.log")  # Log path should be preserved
+    mock_call_model.assert_called_once()
