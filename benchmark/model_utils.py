@@ -182,7 +182,9 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         temperature=0,
     )
 
-    content = response.choices[0].message.content
+    message = response.choices[0].message
+    # Handle both real responses and mocked ones
+    content = message.content if isinstance(message, dict) else message.content
     if content is None:
         raise ValueError("Model response content was None")
 

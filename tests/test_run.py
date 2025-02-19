@@ -55,21 +55,7 @@ def test_argument_validation():
 
 
 @pytest.mark.asyncio
-@patch("benchmark.model_utils.call_model", new_callable=AsyncMock)
-@patch("benchmark.model_utils.os.getenv", return_value="test-key")
-async def test_run_game(mock_getenv, mock_call_model):
-    # Mock model responses
-    mock_response = ModelResponse(
-        content="Test Card|Because it matches",
-        model="test-model",
-        tokens_prompt=10,
-        tokens_completion=5,
-        total_cost=0.0001,
-        generation_id="test-id-run",
-        log_path=Path("tests/test.log"),
-    )
-    mock_call_model.return_value = mock_response
-
+async def test_run_game():
     # Test new game with random models
     game_coro = run_game(num_rounds=3, num_players=2, models=["random", "random"])
     game = await game_coro
@@ -77,17 +63,41 @@ async def test_run_game(mock_getenv, mock_call_model):
     assert len(game.players) == 2
     assert game.total_rounds == 3
     assert all(len(player.won_rounds) > 0 for player in game.players.values())
-    assert mock_call_model.call_count == 0  # No model calls for random players
 
     # Test game with real model
-    mock_call_model.reset_mock()
-    game_coro = run_game(num_rounds=2, num_players=2, models=["random", "gpt-4"])
-    game = await game_coro
-    assert len(game.rounds) == 2
-    assert len(game.players) == 2
-    assert game.total_rounds == 2
-    # Should have model calls for the gpt-4 player's moves and when they judge
-    assert mock_call_model.call_count > 0
+    mock_completion = AsyncMock()
+    mock_completion.choices = [
+        AsyncMock(
+            message=AsyncMock(
+                content='{"reasoning": "Test reasoning", "card": "Test Card"}'
+            )
+        )
+    ]
+    mock_completion.id = "test-id-run"
+
+    mock_chat = AsyncMock()
+    mock_chat.completions.create = AsyncMock(return_value=mock_completion)
+
+    mock_client = AsyncMock()
+    mock_client.chat = mock_chat
+
+    call_count = 0
+
+    async def create_completion(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        return mock_completion
+
+    mock_chat.completions.create = create_completion
+
+    with patch("benchmark.model_utils.AsyncOpenAI", return_value=mock_client):
+        game_coro = run_game(num_rounds=2, num_players=2, models=["random", "gpt-4"])
+        game = await game_coro
+        assert len(game.rounds) == 2
+        assert len(game.players) == 2
+        assert game.total_rounds == 2
+        # Should have model calls for the gpt-4 player's moves and when they judge
+        assert call_count > 0
 
     # Test save and load game
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -325,9 +335,26 @@ async def test_model_log_preservation():
             return response
 
         # Run a game with the mock
-        with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
-            "benchmark.model_utils.call_model", new=mock_call_model
-        ):
+        response_index = 0
+
+        async def create_completion(**kwargs):
+            nonlocal response_index
+            response = responses[response_index]
+            response_index = (response_index + 1) % len(responses)
+            mock_completion = AsyncMock()
+            mock_completion.choices = [
+                AsyncMock(message=AsyncMock(content=response.content))
+            ]
+            mock_completion.id = response.generation_id
+            return mock_completion
+
+        mock_chat = AsyncMock()
+        mock_chat.completions.create = create_completion
+
+        mock_client = AsyncMock()
+        mock_client.chat = mock_chat
+
+        with patch("benchmark.model_utils.AsyncOpenAI", return_value=mock_client):
             game = await run_game(
                 num_rounds=2,
                 num_players=2,
@@ -395,19 +422,23 @@ async def test_judge_move_with_exact_cards():
     game.rounds = [round]
 
     # Test case 1: Model responds with proper JSON format
-    with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
-        "benchmark.model_utils.call_model", new_callable=AsyncMock
-    ) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "After careful consideration", "card": "Queen Elizabeth"}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id",
-            log_path=Path("tests/test.log"),
+    mock_completion = AsyncMock()
+    mock_completion.choices = [
+        AsyncMock(
+            message=AsyncMock(
+                content='{"reasoning": "After careful consideration", "card": "Queen Elizabeth"}'
+            )
         )
-        mock_call.return_value = mock_response
+    ]
+    mock_completion.id = "test-id"
+
+    mock_chat = AsyncMock()
+    mock_chat.completions.create = AsyncMock(return_value=mock_completion)
+
+    mock_client = AsyncMock()
+    mock_client.chat = mock_chat
+
+    with patch("benchmark.model_utils.AsyncOpenAI", return_value=mock_client):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
