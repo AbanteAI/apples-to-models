@@ -8,17 +8,18 @@ from benchmark.game import Game
 
 def test_game_initialization():
     players = ["Alice", "Bob", "Charlie"]
-    game = Game.new_game(players)
+    game = Game.new_game(players, total_rounds=6)
 
     assert len(game.players) == 3
     assert all(len(player.hand) == 7 for player in game.players.values())
     assert game.current_round == 0
     assert len(game.rounds) == 0
+    assert game.total_rounds == 6
 
 
 def test_round_gameplay():
     players = ["Alice", "Bob", "Charlie"]
-    game = Game.new_game(players)
+    game = Game.new_game(players, total_rounds=6)
 
     # Start round
     round = game.start_round()
@@ -43,7 +44,7 @@ def test_round_gameplay():
 
 def test_game_serialization():
     players = ["Alice", "Bob", "Charlie"]
-    game = Game.new_game(players)
+    game = Game.new_game(players, total_rounds=6)
 
     # Play a round
     round = game.start_round()
@@ -76,7 +77,7 @@ def test_html_game_report():
     from benchmark.game_report import generate_html_report, save_html_report
 
     players = ["Alice", "Bob", "Charlie"]
-    game = Game.new_game(players)
+    game = Game.new_game(players, total_rounds=6)
 
     # Play a complete round
     round = game.start_round()
@@ -133,7 +134,7 @@ def test_html_game_report():
 
 def test_error_handling():
     players = ["Alice", "Bob"]
-    game = Game.new_game(players)
+    game = Game.new_game(players, total_rounds=4)
 
     # Test playing before round starts
     with pytest.raises(ValueError):

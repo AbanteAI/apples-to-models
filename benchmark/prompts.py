@@ -29,13 +29,17 @@ def format_scores(
     return "\n".join(scores)
 
 
-def create_system_message(total_players: int, player_number: int) -> str:
-    """Create the system message with player count information."""
+def create_system_message(
+    total_players: int, player_number: int, total_rounds: int
+) -> str:
+    """Create the system message with player count and round information."""
     return (
-        "You are playing Apples to Apples, a word association game. "
+        "You are playing Apples to Apples, a competitive word association game. "
         f"There are {total_players} players in the game, and you are Player {player_number}. "
-        "In each round, there is a green card (an adjective) and players play red cards (nouns) "
-        "that they think best match the green card. The judge picks the best match."
+        f"The game consists of {total_rounds} rounds, and the player with the most wins at the end is the winner. "
+        "In each round, there is a green card (an adjective) and players play red cards (nouns). "
+        "Your goal is to win by playing cards that the judge will select, not necessarily the ones "
+        "that match the green card most literally. Think strategically about what will appeal to the judge!"
     )
 
 
@@ -47,19 +51,22 @@ def format_cards_list(cards: List[str]) -> str:
 def get_player_prompt_template() -> str:
     """Get the template for player prompts."""
     return (
-        "Which card from your hand best matches this green card? "
+        "Which card from your hand do you think will win this round? "
+        "Consider the green card, but also think about what will appeal to the judge. "
+        "Play strategically to win! "
         "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'Looking at my options, Dinosaurs would be perfect because they represent something truly enormous. "
-        "While Mountains are also big, Dinosaurs have a more impressive and awe-inspiring scale | Dinosaurs'"
+        "For example: 'While Mountains literally match the green card better, Dinosaurs would be more "
+        "exciting and memorable. The judge is likely to appreciate the creative connection | Dinosaurs'"
     )
 
 
 JUDGE_PROMPT = (
     "You are the judge this round.\n"
-    "Which red card best matches the green card? "
+    "Pick whichever red card you like best! You can consider how well it matches the green card, "
+    "but you're also free to choose based on creativity, humor, or any other criteria you prefer. "
     "Respond with your reasoning followed by the card name, separated by ' | '. "
-    "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
-    "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
+    "For example: 'While all cards have merit, Dinosaurs wins because it made me laugh thinking about "
+    "a T-Rex trying to do this. It's not the most literal match, but it's the most entertaining | Dinosaurs'"
 )
 
 
@@ -84,7 +91,9 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         Messages object containing the system and historical messages
     """
     messages = Messages()
-    messages.add_system(create_system_message(len(game.players), player_idx + 1))
+    messages.add_system(
+        create_system_message(len(game.players), player_idx + 1, game.total_rounds)
+    )
 
     # Add game history for all rounds
     for round in game.rounds:

@@ -207,12 +207,14 @@ async def run_game(
             raise ValueError(
                 f"Loaded game has {len(game.players)} players, but {num_players} were requested"
             )
+        # Update total_rounds if continuing with a different number
+        game.total_rounds = num_rounds
     else:
         # Create player names as "Player X (model_type)"
         player_names = [
             f"Player {i} ({model})" for i, model in enumerate(models, start=1)
         ]
-        game = Game.new_game(player_names)
+        game = Game.new_game(player_names, total_rounds=num_rounds)
 
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
