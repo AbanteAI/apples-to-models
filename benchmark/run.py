@@ -177,7 +177,7 @@ async def model_player_move(
                 f"Model error for player {player_idx + 1}, falling back to random: {str(e)}"
             )
             card, thinking, _ = random_player_move(game, player_idx)
-            return card, thinking, None
+            return card, f"Random selection (model failed: {str(e)})", None
 
 
 async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
@@ -224,7 +224,7 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
             return (
                 winning_move.played_card,
                 f"Random selection (model failed: {str(e)})",
-                None,
+                model_response.log_path if model_response else None,
             )
 
 

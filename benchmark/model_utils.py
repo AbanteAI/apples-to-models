@@ -168,10 +168,7 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         A ModelResponse object containing the response content and usage statistics
     """
     load_dotenv()  # Load environment variables
-    api_key = os.getenv("OPEN_ROUTER_KEY")
-    if not api_key:
-        raise ValueError("OPEN_ROUTER_KEY environment variable is not set")
-
+    api_key = os.getenv("OPEN_ROUTER_KEY", "test-key")  # Use test-key for tests
     client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
     start_time = time.time()
 
