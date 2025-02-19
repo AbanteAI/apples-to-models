@@ -153,7 +153,14 @@ async def handle_model_interaction(
     model_response = None
     try:
         model_response = await call_model(model, messages)
+    except Exception as e:
+        if "OPEN_ROUTER_KEY" not in str(e):  # Don't catch API key errors in tests
+            print(f"Model error for {role}, falling back to random: {str(e)}")
+            card, thinking, _ = fallback_fn(*fallback_args)
+            return card, thinking, None
+        raise  # Re-raise API key errors
 
+    try:
         # Parse JSON response
         try:
             thinking, card = parse_model_response(model_response.content)
@@ -175,22 +182,15 @@ async def handle_model_interaction(
         return card, thinking, model_response.log_path
 
     except Exception as e:
-        # Fallback to random selection if model fails, but preserve the log if we have it
-        error_msg = str(e)
-        if model_response:
-            error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
-            print(f"\nError parsing {role} response: {error_msg}")
-            card, thinking, _ = fallback_fn(*fallback_args)
-            return (
-                card,
-                f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
-                model_response.log_path,
-            )
-        else:
-            # Model call itself failed
-            print(f"Model error for {role}, falling back to random: {str(e)}")
-            card, thinking, _ = fallback_fn(*fallback_args)
-            return card, thinking, None
+        # Fallback to random selection if model fails, but preserve the log
+        error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
+        print(f"\nError parsing {role} response: {error_msg}")
+        card, thinking, _ = fallback_fn(*fallback_args)
+        return (
+            card,
+            f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
+            model_response.log_path,
+        )
 
 
 async def model_player_move(
