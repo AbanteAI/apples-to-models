@@ -377,8 +377,9 @@ def test_game_history_visibility():
     assert_content_contains(player1_view, "- Ice")
     assert_content_contains(player1_view, "- Winter")
     # Should see their own judgement was used
-    assert_content_contains(player1_view, "Your judgement was:")
-    assert_content_contains(player1_view, "You selected 'Ice' as the winner.")
+    assert_content_contains(player1_view, "Your previous judgement was:")
+    # Should see their raw response
+    assert_content_contains(player1_view, judge_raw_response)
     # Should not see other players' raw responses
     assert raw_response_1 not in player1_view
     assert raw_response_2 not in player1_view
