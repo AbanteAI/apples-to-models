@@ -135,16 +135,10 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     f"{round.decision.reasoning} | {round.decision.winning_card}"
                 )
             else:
-                # For others, only show the judge's decision
-                judge_text = (
-                    "Your"
-                    if round.judge == player_idx
-                    else f"Player {round.judge + 1}'s"
-                )
                 if round.judge == player_idx:
                     # Show full reasoning to the judge
                     messages.add_user(
-                        f"{judge_text} judgement was:\n\n"
+                        f"Your judgement was:\n\n"
                         f"{round.decision.reasoning}\n\n"
                         f"You selected '{round.decision.winning_card}' as the winner."
                     )
