@@ -198,7 +198,6 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         response=content,
         cost=stats["total_cost"],
         duration=duration,
-        identifier=identifier,
     )
 
     return ModelResponse(
