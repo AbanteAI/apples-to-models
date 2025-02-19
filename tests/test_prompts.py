@@ -123,7 +123,7 @@ def test_create_judge_messages_basic():
 
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
-    assert_content_contains(prompt_message, "You are the judge")
+    assert_content_contains(prompt_message, "You are the judge this round")
     assert_content_contains(prompt_message, get_judge_prompt_template())
 
 
@@ -187,8 +187,7 @@ def test_create_judge_messages_with_history():
 
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
-    assert_content_contains(prompt_message, "Round 2")
-    assert_content_contains(prompt_message, "Happy")
+    assert_content_contains(prompt_message, "You are the judge this round")
     assert_content_contains(prompt_message, get_judge_prompt_template())
 
 

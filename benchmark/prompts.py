@@ -77,11 +77,7 @@ def create_judge_prompt(
     round_num: int, green_card: str, played_cards: List[str]
 ) -> str:
     """Create the prompt for a judge to select a winning card."""
-    return (
-        f"Current Round {round_num + 1}\n"
-        f"You are the judge. The green card is: {green_card}\n"
-        f"{get_judge_prompt_template()}"
-    )
+    return "You are the judge this round.\n" f"{get_judge_prompt_template()}"
 
 
 def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messages:
@@ -131,8 +127,9 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
             if round.judge == player_idx and is_judge:
                 # For the judge, show their prompt and response (without repeating cards)
                 messages.add_user(
-                    f"You are the judge. The green card is: {round.green_card}\n"
-                    f"{get_judge_prompt_template()}"
+                    create_judge_prompt(
+                        round.round_number, round.green_card, played_cards
+                    )
                 )
                 messages.add_assistant(
                     f"{round.decision.reasoning} | {round.decision.winning_card}"
