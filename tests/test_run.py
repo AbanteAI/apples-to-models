@@ -522,7 +522,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed:" in thinking
-    assert "Could not find matching card" in thinking
+    assert "which is not in played cards" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
     mock_call_model.assert_called_once()
