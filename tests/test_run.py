@@ -197,6 +197,74 @@ def test_normalize_card_name():
     assert normalize_card_name("QuEeN eLiZaBeTh") == "queenelizabeth"
 
 
+def test_parse_model_response():
+    """Test the model response parsing function"""
+    import pytest
+
+    from benchmark.run import parse_model_response
+
+    # Test valid JSON response
+    response = '{"reasoning": "Good thinking", "card": "Test Card"}'
+    thinking, card = parse_model_response(response)
+    assert thinking == "Good thinking"
+    assert card == "Test Card"
+
+    # Test response with markdown code block
+    response = """```json
+    {
+        "reasoning": "Good thinking",
+        "card": "Test Card"
+    }
+    ```"""
+    thinking, card = parse_model_response(response)
+    assert thinking == "Good thinking"
+    assert card == "Test Card"
+
+    # Test response with extra whitespace
+    response = """
+    {
+        "reasoning": "  Good thinking  ",
+        "card": "  Test Card  "
+    }
+    """
+    thinking, card = parse_model_response(response)
+    assert thinking == "Good thinking"
+    assert card == "Test Card"
+
+    # Test response with newlines in reasoning
+    response = """
+    {
+        "reasoning": "Line 1\\nLine 2\\nLine 3",
+        "card": "Test Card"
+    }
+    """
+    thinking, card = parse_model_response(response)
+    assert "Line 1" in thinking
+    assert "Line 2" in thinking
+    assert "Line 3" in thinking
+    assert card == "Test Card"
+
+    # Test invalid JSON
+    with pytest.raises(ValueError, match="Invalid JSON response"):
+        parse_model_response("not json")
+
+    # Test missing required fields
+    with pytest.raises(ValueError, match="must contain 'reasoning' and 'card' fields"):
+        parse_model_response('{"thinking": "Good thinking"}')
+
+    # Test non-object response
+    with pytest.raises(ValueError, match="must be a JSON object"):
+        parse_model_response('"string response"')
+
+    # Test array response
+    with pytest.raises(ValueError, match="must be a JSON object"):
+        parse_model_response('["thinking", "card"]')
+
+    # Test response with wrong field names
+    with pytest.raises(ValueError, match="must contain 'reasoning' and 'card' fields"):
+        parse_model_response('{"thought": "Good thinking", "choice": "Test Card"}')
+
+
 @pytest.mark.asyncio
 async def test_model_log_preservation():
     """Test that model logs are preserved when model responses are invalid"""
