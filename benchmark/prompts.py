@@ -148,11 +148,14 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
             else:
                 if round.judge == player_idx:
                     # Show full reasoning to the judge
-                    messages.add_user(
-                        f"Your judgement was:\n\n"
-                        f"{round.decision.reasoning}\n\n"
-                        f"You selected '{round.decision.winning_card}' as the winner."
-                    )
+                    messages.add_user("Your previous judgement was:")
+                    if round.decision.raw_response:
+                        messages.add_assistant(round.decision.raw_response)
+                    else:
+                        # Fallback for random moves or old game states
+                        messages.add_assistant(
+                            f"{round.decision.reasoning} | {round.decision.winning_card}"
+                        )
                 else:
                     # Only show the decision to other players
                     messages.add_user(
