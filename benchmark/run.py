@@ -7,7 +7,7 @@ import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from termcolor import cprint  # type: ignore
 
@@ -133,7 +133,7 @@ async def handle_model_interaction(
     messages: Messages,
     valid_cards: list[str],
     role: str,
-    fallback_fn: callable,
+    fallback_fn: Callable[[Game, int], tuple[str, str, Optional[Path]]],
     fallback_args: tuple,
 ) -> tuple[str, str, Optional[Path]]:
     """Handle model interaction with error handling and fallback.
