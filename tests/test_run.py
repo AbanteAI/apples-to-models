@@ -281,7 +281,7 @@ async def test_model_log_preservation():
                 move = round2.moves[0]
                 assert move.log_path == player_invalid_response.log_path
                 assert "Random selection" in move.thinking
-                assert "Invalid Card (Winner)" in move.thinking
+                assert "Invalid JSON response" in move.thinking
 
             # Verify that the HTML report contains links to both logs
             state_path = os.path.join(temp_dir, "game_state.json")
