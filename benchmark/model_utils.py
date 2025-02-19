@@ -194,21 +194,27 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
     # Fetch generation stats
     stats = await get_generation_stats(generation_id, api_key)
 
-    # Write log file
-    log_path = write_model_log(
-        model=model,
-        messages=messages,
-        response=content,
-        cost=stats["total_cost"],
-        duration=time.time() - start_time,
-    )
+    # Extract stats data, handling both real API responses and mock data
+    stats_data = stats.get("data", stats)  # Use stats directly if no "data" key
+    model_name = stats_data.get("model", model)
+    log_path = stats_data.get("log_path", None)
+
+    # Write log file if not provided in stats
+    if log_path is None:
+        log_path = write_model_log(
+            model=model_name,
+            messages=messages,
+            response=content,
+            cost=stats_data["total_cost"],
+            duration=time.time() - start_time,
+        )
 
     return ModelResponse(
         content=content,
-        model=model,
-        tokens_prompt=stats["tokens_prompt"],
-        tokens_completion=stats["tokens_completion"],
-        total_cost=stats["total_cost"],
+        model=model_name,
+        tokens_prompt=stats_data["tokens_prompt"],
+        tokens_completion=stats_data["tokens_completion"],
+        total_cost=stats_data["total_cost"],
         generation_id=generation_id,
         log_path=log_path,
     )
