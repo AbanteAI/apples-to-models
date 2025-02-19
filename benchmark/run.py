@@ -133,7 +133,7 @@ async def model_player_move(
             card, thinking, _ = random_player_move(game, player_idx)
             return (
                 card,
-                f"Random selection (model failed: {str(e)})",
+                f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
                 model_response.log_path,
             )
         else:
