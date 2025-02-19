@@ -152,12 +152,13 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner."
                 )
 
-            # Finally, show who played the winning card
+            # Finally, show who played the winning card and the scores
             for pid, move in round.moves.items():
                 if move.played_card == round.decision.winning_card:
                     winner_text = "you" if pid == player_idx else f"Player {pid + 1}"
                     messages.add_user(
-                        f"{winner_text} played the {move.played_card} card, and won this round!"
+                        f"{winner_text} played the {move.played_card} card, and won this round!\n\n"
+                        f"Scores:\n{format_scores(game, player_idx, round.round_number)}"
                     )
                     break
 
@@ -165,12 +166,6 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         elif not round.decision and player_idx != round.judge:
             messages.add_user(
                 f"The played red cards are:\n{format_cards_list(played_cards)}"
-            )
-
-        # Show scores after the decision, up to the current round
-        if round.decision:
-            messages.add_user(
-                f"\nScores:\n{format_scores(game, player_idx, round.round_number)}\n"
             )
 
     return messages
