@@ -55,7 +55,6 @@ def test_argument_validation():
 
 
 @pytest.mark.asyncio
-@patch.dict(os.environ, {"OPEN_ROUTER_KEY": "test-key"})
 @patch("benchmark.run.call_model")  # Patch before it's imported in run.py
 async def test_run_game(mock_call_model):
     # Mock model responses
@@ -267,7 +266,6 @@ def test_parse_model_response():
 
 
 @pytest.mark.asyncio
-@patch.dict(os.environ, {"OPEN_ROUTER_KEY": "test-key"})
 @patch("benchmark.run.call_model")  # Patch before it's imported in run.py
 async def test_model_log_preservation(mock_call_model):
     """Test that model logs are preserved when model responses are invalid"""
@@ -373,7 +371,6 @@ async def test_model_log_preservation(mock_call_model):
 
 
 @pytest.mark.asyncio
-@patch.dict(os.environ, {"OPEN_ROUTER_KEY": "test-key"})
 @patch("benchmark.run.call_model")  # Patch before it's imported in run.py
 async def test_judge_move_with_exact_cards(mock_call_model):
     """Test the judge's move with the exact cards from issue #24"""
