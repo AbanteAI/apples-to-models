@@ -135,17 +135,18 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     f"{round.decision.reasoning} | {round.decision.winning_card}"
                 )
             else:
-                # For others, show the judge's reasoning
-                judge_text = (
-                    "Your"
-                    if round.judge == player_idx
-                    else f"Player {round.judge + 1}'s"
-                )
-                messages.add_user(
-                    f"{judge_text} judgement was:\n\n"
-                    f"{round.decision.reasoning}\n\n"
-                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner."
-                )
+                if round.judge == player_idx:
+                    # Show full reasoning to the judge
+                    messages.add_user(
+                        f"Your judgement was:\n\n"
+                        f"{round.decision.reasoning}\n\n"
+                        f"You selected '{round.decision.winning_card}' as the winner."
+                    )
+                else:
+                    # Only show the decision to other players
+                    messages.add_user(
+                        f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner."
+                    )
 
             # Finally, show who played the winning card and the scores
             for pid, move in round.moves.items():
