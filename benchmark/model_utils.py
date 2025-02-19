@@ -179,7 +179,6 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
     if not api_key:
         raise ValueError("OPEN_ROUTER_KEY environment variable is not set")
 
-    # For real API calls
     client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
 
     # Make the initial completion request
