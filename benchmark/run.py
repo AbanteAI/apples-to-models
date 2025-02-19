@@ -85,14 +85,6 @@ def validate_args(args: argparse.Namespace) -> None:
         )
 
 
-def random_player_move(game: Game, player_idx: int) -> tuple[str, str, Optional[Path]]:
-    """Make a random move for the given player"""
-    player = game.players[player_idx]
-    card = random.choice(player.hand)
-    thinking = "Random selection"
-    return card, thinking, None
-
-
 def normalize_card_name(card: str) -> str:
     """Convert card name to lowercase and remove non-alphabetic characters"""
     return "".join(c.lower() for c in card if c.isalpha())
@@ -129,64 +121,25 @@ def parse_model_response(content: str) -> tuple[str, str]:
         raise ValueError(f"Invalid JSON response: {e}")
 
 
-async def model_player_move(
-    game: Game, player_idx: int, model: str
+async def model_move(
+    game: Game,
+    model: str,
+    valid_cards: List[str],
+    messages: Messages,
+    role: str,
 ) -> tuple[str, str, Optional[Path]]:
-    """Make a model-based move for the given player"""
-    player = game.players[player_idx]
-    round = game.rounds[-1]
-    green_card = round.green_card
+    """Make a model-based move for either a player or judge.
 
-    model_response = None
-    try:
-        messages = create_player_messages(game, player_idx, green_card, player.hand)
-        model_response = await call_model(model, messages)
+    Args:
+        game: The current game state
+        model: The model to use for the move
+        valid_cards: List of valid cards to choose from (hand or played cards)
+        messages: Messages object for the model
+        role: Either "player" or "judge" to customize error messages
 
-        # Parse JSON response
-        try:
-            thinking, card = parse_model_response(model_response.content)
-        except ValueError as e:
-            raise ValueError(str(e))
-
-        # Normalize the chosen card and player's hand
-        normalized_card = normalize_card_name(card)
-        # Find the matching card from the hand using normalized comparison
-        for original_card in player.hand:
-            if normalize_card_name(original_card) == normalized_card:
-                card = original_card
-                break
-        else:
-            raise ValueError(f"Model chose card '{card}' which is not in player's hand")
-
-        return card, thinking, model_response.log_path
-    except Exception as e:
-        # Fallback to random selection if model fails, but preserve the log if we have it
-        error_msg = str(e)
-        if model_response:
-            error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
-            print(f"\nError parsing player response: {error_msg}")
-            card, thinking, _ = random_player_move(game, player_idx)
-            return (
-                card,
-                f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
-                model_response.log_path,
-            )
-        else:
-            # Model call itself failed
-            print(
-                f"Model error for player {player_idx + 1}, falling back to random: {str(e)}"
-            )
-            card, thinking, _ = random_player_move(game, player_idx)
-            return card, f"Random selection (model failed: {str(e)})", None
-
-
-async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
-    """Make a model-based judging decision"""
-    round = game.rounds[-1]
-    moves = round.moves
-    played_cards = [move.played_card for move in moves.values()]
-    messages = create_judge_messages(game, round.judge)
-
+    Returns:
+        Tuple of (chosen_card, thinking, log_path)
+    """
     model_response = None
     try:
         model_response = await call_model(model, messages)
@@ -199,13 +152,14 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
 
         # Normalize card name and find match
         normalized_card = normalize_card_name(card)
-        for played_card in played_cards:
-            if normalize_card_name(played_card) == normalized_card:
-                card = played_card
+        for original_card in valid_cards:
+            if normalize_card_name(original_card) == normalized_card:
+                card = original_card
                 break
         else:
+            valid_type = "player's hand" if role == "player" else "played cards"
             raise ValueError(
-                f"Could not find matching card '{card}' among played cards: {played_cards}"
+                f"Model chose card '{card}' which is not in {valid_type}: {valid_cards}"
             )
 
         return card, thinking, model_response.log_path
@@ -214,18 +168,18 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
         # If we have a model response but failed to parse it, include the raw response
         if model_response:
             error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
-            print(f"\nError parsing judge response: {error_msg}")
-            winning_move = random.choice(list(moves.values()))
-            return winning_move.played_card, error_msg, model_response.log_path
+            print(f"\nError parsing {role} response: {error_msg}")
+            card = random.choice(valid_cards)
+            return (
+                card,
+                f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
+                model_response.log_path,
+            )
         else:
             # Model call itself failed
-            print(f"Model error for judge, falling back to random: {str(e)}")
-            winning_move = random.choice(list(moves.values()))
-            return (
-                winning_move.played_card,
-                f"Random selection (model failed: {str(e)})",
-                model_response.log_path if model_response else None,
-            )
+            print(f"Model error for {role}, falling back to random: {str(e)}")
+            card = random.choice(valid_cards)
+            return card, f"Random selection (model failed: {str(e)})", None
 
 
 async def run_game(
@@ -281,10 +235,15 @@ async def run_game(
                 player = game.players[player_idx]
 
                 if model == "random":
-                    card, thinking, log_path = random_player_move(game, player_idx)
+                    card = random.choice(player.hand)
+                    thinking = "Random selection"
+                    log_path = None
                 else:
-                    card, thinking, log_path = await model_player_move(
-                        game, player_idx, model
+                    messages = create_player_messages(
+                        game, player_idx, round.green_card, player.hand
+                    )
+                    card, thinking, log_path = await model_move(
+                        game, model, player.hand, messages, "player"
                     )
 
                 # Print all player output together after the model call
@@ -316,54 +275,40 @@ async def run_game(
             judge_model = models[round.judge]
             cprint("\nJudge's Decision:", "green")
             if judge_model == "random":
-                winning_move = random.choice(list(round.moves.values()))
-                winning_card = winning_move.played_card
+                played_cards = [move.played_card for move in round.moves.values()]
+                winning_card = random.choice(played_cards)
                 thinking = "Random selection"
-                game.judge_round(winning_card, thinking)
-                # Create a new decision with the no_log path
-                if game.rounds[-1].decision:
-                    game.rounds[-1].decision = JudgeDecision(
-                        winning_card=winning_card,
-                        winning_player=game.rounds[-1].decision.winning_player,
-                        reasoning=thinking,
-                        log_path=Path("benchmark/logs/no_log.txt"),
-                    )
-                cprint(f"Winner: {winning_card}", "green")
-                # Find the player who played the winning card
-                for player_idx, move in round.moves.items():
-                    if move.played_card == winning_card:
-                        winning_player = game.players[player_idx]
-                        cprint(
-                            f"{winning_player.name} (Player {player_idx}) wins the round!",
-                            "green",
-                        )
-                        break
+                log_path = Path("benchmark/logs/no_log.txt")
             else:
-                winning_card, thinking, log_path = await model_judge_move(
-                    game, judge_model
+                messages = create_judge_messages(game, round.judge)
+                played_cards = [move.played_card for move in round.moves.values()]
+                winning_card, thinking, log_path = await model_move(
+                    game, judge_model, played_cards, messages, "judge"
                 )
-                game.judge_round(winning_card, thinking)
-                # Create a new decision with the log path
-                if game.rounds[-1].decision:
-                    game.rounds[-1].decision = JudgeDecision(
-                        winning_card=winning_card,
-                        winning_player=game.rounds[-1].decision.winning_player,
-                        reasoning=thinking,
-                        log_path=log_path
-                        if log_path
-                        else Path("benchmark/logs/no_log.txt"),
+                log_path = log_path if log_path else Path("benchmark/logs/no_log.txt")
+
+            # Record the decision
+            game.judge_round(winning_card, thinking)
+            if game.rounds[-1].decision:
+                game.rounds[-1].decision = JudgeDecision(
+                    winning_card=winning_card,
+                    winning_player=game.rounds[-1].decision.winning_player,
+                    reasoning=thinking,
+                    log_path=log_path,
+                )
+
+            # Print the results
+            cprint(f"Winner: {winning_card}", "green")
+            for player_idx, move in round.moves.items():
+                if move.played_card == winning_card:
+                    winning_player = game.players[player_idx]
+                    cprint(
+                        f"{winning_player.name} (Player {player_idx}) wins the round!",
+                        "green",
                     )
-                cprint(f"Winner: {winning_card}", "green")
-                # Find the player who played the winning card
-                for player_idx, move in round.moves.items():
-                    if move.played_card == winning_card:
-                        winning_player = game.players[player_idx]
-                        cprint(
-                            f"{winning_player.name} (Player {player_idx}) wins the round!",
-                            "green",
-                        )
+                    if judge_model != "random":
                         cprint(f"Reasoning: {thinking}", "green")
-                        break
+                    break
 
     except KeyboardInterrupt:
         # If the current round is incomplete (no decision), remove it
