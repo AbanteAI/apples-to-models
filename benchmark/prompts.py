@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional
 
 from benchmark.game import Game
@@ -112,12 +113,29 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                 messages.add_user(
                     create_player_prompt(pid, round.green_card, game.players[pid].hand)
                 )
-                if round.decision and move.played_card == round.decision.winning_card:
-                    messages.add_assistant(
-                        f"{move.thinking} | {move.played_card} (Winner)"
-                    )
+                if move.raw_response:
+                    messages.add_assistant(move.raw_response)
                 else:
-                    messages.add_assistant(f"{move.thinking} | {move.played_card}")
+                    # Fallback for random moves or old game states
+                    if (
+                        round.decision
+                        and move.played_card == round.decision.winning_card
+                    ):
+                        messages.add_assistant(
+                            json.dumps(
+                                {
+                                    "reasoning": move.thinking,
+                                    "card": move.played_card,
+                                    "winner": True,
+                                }
+                            )
+                        )
+                    else:
+                        messages.add_assistant(
+                            json.dumps(
+                                {"reasoning": move.thinking, "card": move.played_card}
+                            )
+                        )
             played_cards.append(move.played_card)
 
         # Show played cards to all players
@@ -131,17 +149,29 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
             if round.judge == player_idx and is_judge:
                 # For the judge, show their prompt and response (without repeating cards)
                 messages.add_user(JUDGE_PROMPT)
-                messages.add_assistant(
-                    f"{round.decision.reasoning} | {round.decision.winning_card}"
-                )
+                if round.decision.raw_response:
+                    messages.add_assistant(round.decision.raw_response)
+                else:
+                    # Fallback for random moves or old game states
+                    messages.add_assistant(
+                        f"{round.decision.reasoning} | {round.decision.winning_card}"
+                    )
             else:
                 if round.judge == player_idx:
                     # Show full reasoning to the judge
-                    messages.add_user(
-                        f"Your judgement was:\n\n"
-                        f"{round.decision.reasoning}\n\n"
-                        f"You selected '{round.decision.winning_card}' as the winner."
-                    )
+                    messages.add_user("Your previous judgement was:")
+                    if round.decision.raw_response:
+                        messages.add_assistant(round.decision.raw_response)
+                    else:
+                        # Fallback for random moves or old game states
+                        messages.add_assistant(
+                            json.dumps(
+                                {
+                                    "reasoning": round.decision.reasoning,
+                                    "card": round.decision.winning_card,
+                                }
+                            )
+                        )
                 else:
                     # Only show the decision to other players
                     messages.add_user(

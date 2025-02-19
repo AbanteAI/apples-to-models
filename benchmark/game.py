@@ -47,6 +47,7 @@ class PlayerMove(BaseModel):
     thinking: str  # Private reasoning for the move
     drawn_card: str  # Card drawn to replace the played card
     log_path: Union[str, Path]  # Path to the model call log
+    raw_response: Optional[str] = None  # Raw model response if available
 
 
 class JudgeDecision(BaseModel):
@@ -56,6 +57,7 @@ class JudgeDecision(BaseModel):
     winning_player: int
     reasoning: str  # Public reasoning for the decision
     log_path: Union[str, Path]  # Path to the model call log
+    raw_response: Optional[str] = None  # Raw model response if available
 
 
 class Round(BaseModel):
@@ -196,6 +198,7 @@ class Game(BaseModel):
             thinking=thinking,
             drawn_card=new_card,
             log_path=log_path,
+            raw_response=model_response.content if model_response else None,
         )
 
     def judge_round(
@@ -245,6 +248,7 @@ class Game(BaseModel):
             winning_player=winning_player,
             reasoning=reasoning,
             log_path=log_path,
+            raw_response=model_response.content if model_response else None,
         )
 
         # Update winner's score
