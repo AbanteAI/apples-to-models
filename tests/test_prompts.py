@@ -327,8 +327,14 @@ def test_game_history_visibility():
 
     # Should see their own thinking
     assert_content_contains(player3_view, "Winter is the coldest season")
-    # Should see winning player's identity
-    assert_content_contains(player3_view, "Player 2 played: Ice (Winner)")
+    # Should see all played cards listed together
+    assert_content_contains(
+        player3_view, "The red cards played for this round were: Ice, Winter."
+    )
+    # Should see who won the round
+    assert_content_contains(
+        player3_view, "Player 2 played the Ice card, and won this round!"
+    )
     # Should see current round cards anonymously
     assert_content_contains(player3_view, "The played red cards are:")
     # Should not see other players' thinking
