@@ -216,123 +216,134 @@ async def run_game(
         ]
         game = Game.new_game(player_names, total_rounds=num_rounds)
 
-    # Run rounds until target is reached
-    while len(game.rounds) < num_rounds:
-        round = game.start_round()
-        cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
-        cprint(
-            f"Judge: {game.players[round.judge].name} (Player {round.judge})", "yellow"
-        )
-        cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
+    try:
+        # Run rounds until target is reached
+        while len(game.rounds) < num_rounds:
+            round = game.start_round()
+            cprint(f"\n=== Round {len(game.rounds)} ===", "yellow")
+            cprint(
+                f"Judge: {game.players[round.judge].name} (Player {round.judge})",
+                "yellow",
+            )
+            cprint(f"Green Card (Adjective): {round.green_card}", "yellow")
 
-        # Have non-judge players make moves in parallel using asyncio
-        async def process_player_move(player_idx, model):
-            if player_idx == round.judge:
-                return None
+            # Have non-judge players make moves in parallel using asyncio
+            async def process_player_move(player_idx, model):
+                if player_idx == round.judge:
+                    return None
 
-            player = game.players[player_idx]
+                player = game.players[player_idx]
 
-            if model == "random":
-                card, thinking, log_path = random_player_move(game, player_idx)
+                if model == "random":
+                    card, thinking, log_path = random_player_move(game, player_idx)
+                else:
+                    card, thinking, log_path = await model_player_move(
+                        game, player_idx, model
+                    )
+
+                # Print all player output together after the model call
+                cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
+                cprint(f"Hand: {', '.join(player.hand)}", "red")
+                cprint(f"Plays: {card}", "red")
+                cprint(f"Thinking: {thinking}", "red")
+
+                return player_idx, card, thinking, log_path
+
+            # Create tasks for all players
+            tasks = [
+                process_player_move(player_idx, models[player_idx])
+                for player_idx in range(num_players)
+            ]
+
+            # Run all tasks concurrently and collect results
+            results = await asyncio.gather(*tasks)
+
+            # Process completed moves
+            for result in results:
+                if result:  # Skip None results (judge's turn)
+                    player_idx, card, thinking, log_path = result
+                    game.play_card(player_idx, card, thinking)
+                    if log_path and player_idx in game.rounds[-1].moves:
+                        game.rounds[-1].moves[player_idx].log_path = log_path
+
+            # Judge selects a winner
+            judge_model = models[round.judge]
+            cprint("\nJudge's Decision:", "green")
+            if judge_model == "random":
+                winning_move = random.choice(list(round.moves.values()))
+                winning_card = winning_move.played_card
+                thinking = "Random selection"
+                game.judge_round(winning_card, thinking)
+                # Create a new decision with the no_log path
+                if game.rounds[-1].decision:
+                    game.rounds[-1].decision = JudgeDecision(
+                        winning_card=winning_card,
+                        winning_player=game.rounds[-1].decision.winning_player,
+                        reasoning=thinking,
+                        log_path=Path("benchmark/logs/no_log.txt"),
+                    )
+                cprint(f"Winner: {winning_card}", "green")
+                # Find the player who played the winning card
+                for player_idx, move in round.moves.items():
+                    if move.played_card == winning_card:
+                        winning_player = game.players[player_idx]
+                        cprint(
+                            f"{winning_player.name} (Player {player_idx}) wins the round!",
+                            "green",
+                        )
+                        break
             else:
-                card, thinking, log_path = await model_player_move(
-                    game, player_idx, model
+                winning_card, thinking, log_path = await model_judge_move(
+                    game, judge_model
                 )
-
-            # Print all player output together after the model call
-            cprint(f"\n{player.name} (Player {player_idx})'s turn", "red")
-            cprint(f"Hand: {', '.join(player.hand)}", "red")
-            cprint(f"Plays: {card}", "red")
-            cprint(f"Thinking: {thinking}", "red")
-
-            return player_idx, card, thinking, log_path
-
-        # Create tasks for all players
-        tasks = [
-            process_player_move(player_idx, models[player_idx])
-            for player_idx in range(num_players)
-        ]
-
-        # Run all tasks concurrently and collect results
-        results = await asyncio.gather(*tasks)
-
-        # Process completed moves
-        for result in results:
-            if result:  # Skip None results (judge's turn)
-                player_idx, card, thinking, log_path = result
-                game.play_card(player_idx, card, thinking)
-                if log_path and player_idx in game.rounds[-1].moves:
-                    game.rounds[-1].moves[player_idx].log_path = log_path
-
-        # Judge selects a winner
-        judge_model = models[round.judge]
-        cprint("\nJudge's Decision:", "green")
-        if judge_model == "random":
-            winning_move = random.choice(list(round.moves.values()))
-            winning_card = winning_move.played_card
-            thinking = "Random selection"
-            game.judge_round(winning_card, thinking)
-            # Create a new decision with the no_log path
-            if game.rounds[-1].decision:
-                game.rounds[-1].decision = JudgeDecision(
-                    winning_card=winning_card,
-                    winning_player=game.rounds[-1].decision.winning_player,
-                    reasoning=thinking,
-                    log_path=Path("benchmark/logs/no_log.txt"),
-                )
-            cprint(f"Winner: {winning_card}", "green")
-            # Find the player who played the winning card
-            for player_idx, move in round.moves.items():
-                if move.played_card == winning_card:
-                    winning_player = game.players[player_idx]
-                    cprint(
-                        f"{winning_player.name} (Player {player_idx}) wins the round!",
-                        "green",
+                game.judge_round(winning_card, thinking)
+                # Create a new decision with the log path
+                if game.rounds[-1].decision:
+                    game.rounds[-1].decision = JudgeDecision(
+                        winning_card=winning_card,
+                        winning_player=game.rounds[-1].decision.winning_player,
+                        reasoning=thinking,
+                        log_path=log_path
+                        if log_path
+                        else Path("benchmark/logs/no_log.txt"),
                     )
-                    break
-        else:
-            winning_card, thinking, log_path = await model_judge_move(game, judge_model)
-            game.judge_round(winning_card, thinking)
-            # Create a new decision with the log path
-            if game.rounds[-1].decision:
-                game.rounds[-1].decision = JudgeDecision(
-                    winning_card=winning_card,
-                    winning_player=game.rounds[-1].decision.winning_player,
-                    reasoning=thinking,
-                    log_path=log_path
-                    if log_path
-                    else Path("benchmark/logs/no_log.txt"),
-                )
-            cprint(f"Winner: {winning_card}", "green")
-            # Find the player who played the winning card
-            for player_idx, move in round.moves.items():
-                if move.played_card == winning_card:
-                    winning_player = game.players[player_idx]
-                    cprint(
-                        f"{winning_player.name} (Player {player_idx}) wins the round!",
-                        "green",
-                    )
-                    cprint(f"Reasoning: {thinking}", "green")
-                    break
+                cprint(f"Winner: {winning_card}", "green")
+                # Find the player who played the winning card
+                for player_idx, move in round.moves.items():
+                    if move.played_card == winning_card:
+                        winning_player = game.players[player_idx]
+                        cprint(
+                            f"{winning_player.name} (Player {player_idx}) wins the round!",
+                            "green",
+                        )
+                        cprint(f"Reasoning: {thinking}", "green")
+                        break
 
-    # Save game state
-    final_state_path = save_game_path if save_game_path else str(state_path)
-    game.save_game(final_state_path)
-    print(f"\nGame state saved to: {final_state_path}")
+    except KeyboardInterrupt:
+        # If the current round is incomplete (no decision), remove it
+        if game.rounds and not game.rounds[-1].decision:
+            game.rounds.pop()
+        cprint("\n\nGame interrupted! Saving progress...", "yellow")
 
-    # Generate and save HTML report
-    final_report_path = (
-        os.path.splitext(final_state_path)[0] + ".html"
-        if save_game_path
-        else str(report_path)
-    )
-    save_html_report(game, final_report_path)
-    print(f"Game report saved to: {final_report_path}")
+    finally:
+        # Save game state
+        final_state_path = save_game_path if save_game_path else str(state_path)
+        game.save_game(final_state_path)
+        print(f"\nGame state saved to: {final_state_path}")
 
-    # Open the report in the default web browser
-    webbrowser.open(f"file://{os.path.abspath(final_report_path)}")
+        # Generate and save HTML report
+        final_report_path = (
+            os.path.splitext(final_state_path)[0] + ".html"
+            if save_game_path
+            else str(report_path)
+        )
+        save_html_report(game, final_report_path)
+        print(f"Game report saved to: {final_report_path}")
 
-    return game
+        # Open the report in the default web browser
+        webbrowser.open(f"file://{os.path.abspath(final_report_path)}")
+
+        return game
 
 
 def main():
