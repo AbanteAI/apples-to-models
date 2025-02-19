@@ -123,9 +123,7 @@ def test_create_judge_messages_basic():
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
     assert_content_contains(prompt_message, "You are the judge this round")
-    assert_content_contains(
-        prompt_message, "Which red card best matches the green card?"
-    )
+    assert_content_contains(prompt_message, "Pick whichever red card you like best!")
 
 
 def test_create_judge_messages_with_history():
@@ -189,9 +187,7 @@ def test_create_judge_messages_with_history():
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
     assert_content_contains(prompt_message, "You are the judge this round")
-    assert_content_contains(
-        prompt_message, "Which red card best matches the green card?"
-    )
+    assert_content_contains(prompt_message, "Pick whichever red card you like best!")
 
 
 def test_player_perspective_in_history():
