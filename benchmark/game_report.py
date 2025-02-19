@@ -93,6 +93,64 @@ def generate_win_percentage_chart(game: Game) -> str:
     return chart_path
 
 
+def calculate_model_stats(game: Game) -> dict:
+    """Calculate total time and cost stats for all model calls in the game"""
+    model_stats = {}
+    total_time = 0
+    total_cost = 0
+
+    for round in game.rounds:
+        # Process player moves
+        for move in round.moves.values():
+            if move.log_path and move.log_path.exists():
+                with open(move.log_path, "r") as f:
+                    log_content = f.read()
+                    # Extract model, duration and cost from log
+                    for line in log_content.split("\n"):
+                        if line.startswith("Model: "):
+                            model = line.split("Model: ")[1].strip()
+                            if model not in model_stats:
+                                model_stats[model] = {"time": 0, "cost": 0, "calls": 0}
+                        elif line.startswith("Duration: "):
+                            duration = float(line.split("Duration: ")[1].split()[0])
+                            total_time += duration
+                            if model in model_stats:
+                                model_stats[model]["time"] += duration
+                        elif line.startswith("Cost: "):
+                            cost = float(line.split("Cost: $")[1])
+                            total_cost += cost
+                            if model in model_stats:
+                                model_stats[model]["cost"] += cost
+                                model_stats[model]["calls"] += 1
+
+        # Process judge decision
+        if (
+            round.decision
+            and round.decision.log_path
+            and round.decision.log_path.exists()
+        ):
+            with open(round.decision.log_path, "r") as f:
+                log_content = f.read()
+                for line in log_content.split("\n"):
+                    if line.startswith("Model: "):
+                        model = line.split("Model: ")[1].strip()
+                        if model not in model_stats:
+                            model_stats[model] = {"time": 0, "cost": 0, "calls": 0}
+                    elif line.startswith("Duration: "):
+                        duration = float(line.split("Duration: ")[1].split()[0])
+                        total_time += duration
+                        if model in model_stats:
+                            model_stats[model]["time"] += duration
+                    elif line.startswith("Cost: "):
+                        cost = float(line.split("Cost: $")[1])
+                        total_cost += cost
+                        if model in model_stats:
+                            model_stats[model]["cost"] += cost
+                            model_stats[model]["calls"] += 1
+
+    return {"total_time": total_time, "total_cost": total_cost, "models": model_stats}
+
+
 def generate_html_report(game: Game) -> str:
     """Generate an HTML report for the game"""
 
@@ -103,6 +161,9 @@ def generate_html_report(game: Game) -> str:
         for idx, player in game.players.items()
     }
     standings = sorted(player_stats.items(), key=lambda x: x[1]["wins"], reverse=True)
+
+    # Calculate model stats
+    model_stats = calculate_model_stats(game)
 
     html = f"""
 <!DOCTYPE html>
@@ -116,6 +177,34 @@ def generate_html_report(game: Game) -> str:
             margin: 0 auto;
             padding: 10px;
             line-height: 1.4;
+        }}
+        .model-stats {{
+            background-color: #e7f3fe;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .model-stats table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }}
+        .model-stats th, .model-stats td {{
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #b3d7ff;
+        }}
+        .model-stats th {{
+            background-color: #d0e7ff;
+        }}
+        .model-stats tr:last-child td {{
+            border-bottom: none;
+        }}
+        .totals {{
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
         }}
         .charts {{
             background-color: #f8f9fa;
@@ -207,7 +296,23 @@ def generate_html_report(game: Game) -> str:
 <body>
     <div class="header">
         <h1>Game Report</h1>
-        <h2>Stats</h2>
+        <div class="model-stats">
+            <h2>Model Usage Statistics</h2>
+            <div class="totals">
+                <p>Total Time: {model_stats['total_time']:.2f} seconds</p>
+                <p>Total Cost: ${model_stats['total_cost']:.4f}</p>
+            </div>
+            <table>
+                <tr>
+                    <th>Model</th>
+                    <th>Calls</th>
+                    <th>Time (s)</th>
+                    <th>Cost ($)</th>
+                </tr>
+                {''.join(f"<tr><td>{model}</td><td>{stats['calls']}</td><td>{stats['time']:.2f}</td><td>${stats['cost']:.4f}</td></tr>" for model, stats in model_stats['models'].items())}
+            </table>
+        </div>
+        <h2>Game Stats</h2>
         <p>Total Rounds: {total_rounds}</p>
         <h3>Standings:</h3>
         <ul>
