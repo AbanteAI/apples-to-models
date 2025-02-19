@@ -154,11 +154,12 @@ async def handle_model_interaction(
     try:
         model_response = await call_model(model, messages)
     except Exception as e:
-        if "OPEN_ROUTER_KEY" not in str(e):  # Don't catch API key errors in tests
-            print(f"Model error for {role}, falling back to random: {str(e)}")
-            card, thinking, _ = fallback_fn(*fallback_args)
-            return card, thinking, None
-        raise  # Re-raise API key errors
+        # Re-raise API-related errors in tests
+        if any(s in str(e) for s in ["OPEN_ROUTER_KEY", "No auth credentials", "401"]):
+            raise
+        print(f"Model error for {role}, falling back to random: {str(e)}")
+        card, thinking, _ = fallback_fn(*fallback_args)
+        return card, thinking, None
 
     try:
         # Parse JSON response
