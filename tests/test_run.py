@@ -265,7 +265,8 @@ async def test_model_log_preservation():
                 assert "Invalid Card (Winner)" in move.thinking
 
             # Verify that the HTML report contains links to both logs
-            report_path = os.path.join(temp_dir, "game_report.html")
+            state_path = os.path.join(temp_dir, "game_state.json")
+            report_path = os.path.splitext(state_path)[0] + ".html"
             with open(report_path) as f:
                 report_content = f.read()
                 assert str(valid_response.log_path) in report_content
