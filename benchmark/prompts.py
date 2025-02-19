@@ -123,47 +123,49 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
 
         # Show played cards to all players
         if round.decision:
-            # For completed rounds, show anonymous cards except for the winner
-            winning_card = round.decision.winning_card
-            for pid, move in round.moves.items():
-                if pid != player_idx:  # Don't repeat current player's move
-                    if move.played_card == winning_card:
-                        messages.add_user(
-                            f"Player {pid + 1} played: {move.played_card} (Winner)"
+            if round.judge == player_idx and is_judge:
+                # Show the cards and prompt before showing judge's decision
+                messages.add_user(
+                    create_judge_prompt(
+                        round.round_number, round.green_card, played_cards
+                    )
+                )
+                messages.add_assistant(
+                    f"{round.decision.reasoning} | {round.decision.winning_card}"
+                )
+            else:
+                # For completed rounds, show all played cards and the judge's decision
+                judge_text = (
+                    "Your"
+                    if round.judge == player_idx
+                    else f"Player {round.judge + 1}'s"
+                )
+                messages.add_user(
+                    f"The red cards played for this round were: {', '.join(played_cards)}.\n\n"
+                    f"{judge_text} judgement was:\n\n"
+                    f"{round.decision.reasoning}\n\n"
+                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner."
+                )
+
+                # Add information about who played the winning card
+                for pid, move in round.moves.items():
+                    if move.played_card == round.decision.winning_card:
+                        winner_text = (
+                            "you" if pid == player_idx else f"Player {pid + 1}"
                         )
-                    else:
-                        messages.add_user(f"Someone played: {move.played_card}")
+                        messages.add_user(
+                            f"{winner_text} played the {move.played_card} card, and won this round!"
+                        )
+                        break
+
         # For current round, show anonymous list to non-judges
         elif not round.decision and player_idx != round.judge:
             messages.add_user(
                 f"The played red cards are:\n{format_cards_list(played_cards)}"
             )
 
-        # Show judge's decision
+        # Show scores after the decision, up to the current round
         if round.decision:
-            if round.judge == player_idx:
-                if is_judge:
-                    # Show the cards and prompt before showing judge's decision
-                    messages.add_user(
-                        create_judge_prompt(
-                            round.round_number, round.green_card, played_cards
-                        )
-                    )
-                    messages.add_assistant(
-                        f"{round.decision.reasoning} | {round.decision.winning_card}"
-                    )
-                else:
-                    messages.add_user(
-                        f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
-                        f"Your reasoning: {round.decision.reasoning}"
-                    )
-            else:
-                messages.add_user(
-                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
-                    f"Their reasoning: {round.decision.reasoning}"
-                )
-
-            # Show scores after the decision, up to the current round
             messages.add_user(
                 f"\nScores:\n{format_scores(game, player_idx, round.round_number)}\n"
             )
