@@ -1,6 +1,7 @@
+
 import pytest
 
-from benchmark.model_utils import Messages, call_model
+from benchmark.model_utils import Messages, call_model, write_model_log
 
 
 def test_messages_creation():
@@ -36,3 +37,69 @@ async def test_call_model():
     assert response.tokens_prompt > 0
     assert response.tokens_completion > 0
     assert response.total_cost > 0
+
+
+def test_write_model_log(tmp_path):
+    messages = Messages()
+    messages.add_system("Test system message")
+    messages.add_user("Test user message")
+
+    log_path = write_model_log(
+        model="test-model",
+        messages=messages,
+        response="Test response",
+        cost=0.001,
+        duration=1.0,
+        log_dir=str(tmp_path),
+    )
+
+    assert log_path.exists()
+    assert log_path.is_file()
+
+    with open(log_path) as f:
+        content = f.read()
+        assert "Test system message" in content
+        assert "Test user message" in content
+        assert "Test response" in content
+        assert "Cost: $0.0010" in content
+
+
+def test_write_model_log_with_identifier(tmp_path):
+    messages = Messages()
+    messages.add_system("Test system message")
+
+    # Write logs with different identifiers
+    log_path1 = write_model_log(
+        model="test-model",
+        messages=messages,
+        response="Player 1 response",
+        cost=0.001,
+        duration=1.0,
+        log_dir=str(tmp_path),
+        identifier="player1",
+    )
+
+    log_path2 = write_model_log(
+        model="test-model",
+        messages=messages,
+        response="Player 2 response",
+        cost=0.001,
+        duration=1.0,
+        log_dir=str(tmp_path),
+        identifier="player2",
+    )
+
+    # Verify logs exist and have different paths
+    assert log_path1.exists() and log_path2.exists()
+    assert log_path1 != log_path2
+    assert "player1" in log_path1.name
+    assert "player2" in log_path2.name
+
+    # Verify content is correct for each log
+    with open(log_path1) as f:
+        content1 = f.read()
+        assert "Player 1 response" in content1
+
+    with open(log_path2) as f:
+        content2 = f.read()
+        assert "Player 2 response" in content2

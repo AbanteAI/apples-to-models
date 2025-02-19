@@ -76,6 +76,7 @@ def write_model_log(
     cost: float,
     duration: float,
     log_dir: Optional[str] = None,
+    identifier: Optional[str] = None,
 ) -> Path:
     """Write a log file with model call information.
 
@@ -86,6 +87,7 @@ def write_model_log(
         cost: The cost of the model call
         duration: The duration of the model call in seconds
         log_dir: Optional directory to write logs to (defaults to env var or benchmark/logs)
+        identifier: Optional identifier to make log filename unique (e.g., 'player1', 'judge')
 
     Returns:
         Path: The path to the written log file
@@ -95,7 +97,12 @@ def write_model_log(
     log_dir_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = log_dir_path / f"model_call_{timestamp}.log"
+    # Include identifier in filename if provided
+    filename = f"model_call_{timestamp}"
+    if identifier:
+        filename += f"_{identifier}"
+    filename += ".log"
+    log_file = log_dir_path / filename
 
     with open(log_file, "w", encoding="utf-8") as f:
         # Write header with all metadata
@@ -150,13 +157,16 @@ async def get_generation_stats(generation_id: str, api_key: str) -> dict:
 
 
 @async_retry(tries=5, delay=0.1, backoff=2)
-async def call_model(model: str, messages: Messages) -> ModelResponse:
+async def call_model(
+    model: str, messages: Messages, identifier: Optional[str] = None
+) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
 
     Args:
         model: The model identifier to use
         messages: A Messages instance containing the conversation
+        identifier: Optional identifier to make log filename unique (e.g., 'player1', 'judge')
 
     Returns:
         A ModelResponse object containing the response content and usage statistics
@@ -194,6 +204,7 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         response=content,
         cost=stats["total_cost"],
         duration=duration,
+        identifier=identifier,
     )
 
     return ModelResponse(
