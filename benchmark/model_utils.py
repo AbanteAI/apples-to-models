@@ -27,7 +27,6 @@ class ModelResponse(BaseModel):
     tokens_prompt: int
     tokens_completion: int
     total_cost: float
-    duration: float = 0.5  # Default for tests
     generation_id: str
     log_path: Optional[Path] = None
 
@@ -39,7 +38,6 @@ class ModelResponse(BaseModel):
             f"tokens_prompt={self.tokens_prompt}, "
             f"tokens_completion={self.tokens_completion}, "
             f"total_cost=${self.total_cost:.6f}, "
-            f"duration={self.duration:.2f}s, "
             f"generation_id='{self.generation_id}', "
             f"log_path='{self.log_path}')"
         )

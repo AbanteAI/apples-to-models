@@ -79,21 +79,27 @@ class Player(BaseModel):
 class ModelStats(BaseModel):
     """Tracks statistics for model usage"""
 
-    total_time: float = 0.0
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
     total_cost: float = 0.0
     model_stats: Dict[str, Dict[str, float]] = Field(default_factory=lambda: {})
 
     def add_response(self, response: ModelResponse) -> None:
         """Add a model response to the stats"""
-        self.total_time += response.duration
         self.total_cost += response.total_cost
 
         if response.model not in self.model_stats:
-            self.model_stats[response.model] = {"time": 0.0, "cost": 0.0, "calls": 0.0}
+            self.model_stats[response.model] = {"cost": 0.0, "calls": 0.0}
 
-        self.model_stats[response.model]["time"] += response.duration
         self.model_stats[response.model]["cost"] += response.total_cost
         self.model_stats[response.model]["calls"] += 1
+
+    @property
+    def total_time(self) -> Optional[float]:
+        """Get total time in seconds for the benchmark run"""
+        if self.start_time is None or self.end_time is None:
+            return None
+        return self.end_time - self.start_time
 
 
 class Game(BaseModel):

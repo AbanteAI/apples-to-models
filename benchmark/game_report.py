@@ -250,17 +250,16 @@ def generate_html_report(game: Game) -> str:
         <div class="model-stats">
             <h2>Model Usage Statistics</h2>
             <div class="totals">
-                <p>Total Time: {model_stats['total_time']:.2f} seconds</p>
+                <p>Total Time: {f"{model_stats['total_time']:.2f} seconds" if model_stats['total_time'] is not None else "N/A"}</p>
                 <p>Total Cost: ${model_stats['total_cost']:.4f}</p>
             </div>
             <table>
                 <tr>
                     <th>Model</th>
                     <th>Calls</th>
-                    <th>Time (s)</th>
                     <th>Cost ($)</th>
                 </tr>
-                {''.join(f"<tr><td>{model}</td><td>{stats['calls']}</td><td>{stats['time']:.2f}</td><td>${stats['cost']:.4f}</td></tr>" for model, stats in model_stats['models'].items())}
+                {''.join(f"<tr><td>{model}</td><td>{stats['calls']}</td><td>${stats['cost']:.4f}</td></tr>" for model, stats in model_stats['models'].items())}
             </table>
         </div>
         <h2>Game Stats</h2>
