@@ -176,6 +176,9 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         # This is just a fallback in case it's not
         raise ValueError("Model call not mocked in test")
 
+    if not api_key:
+        raise ValueError("OPEN_ROUTER_KEY environment variable is not set")
+
     # For real API calls
     client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
 
