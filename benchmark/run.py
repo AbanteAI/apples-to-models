@@ -115,7 +115,14 @@ async def model_player_move(
 
         # Parse JSON response
         try:
-            response_data = json.loads(model_response.content)
+            # Strip markdown code block markers if present
+            content = model_response.content
+            if content.startswith("```"):
+                content = "\n".join(content.split("\n")[1:-1])
+            # Clean up the content by removing any problematic whitespace
+            content = content.strip()
+            # Parse with more lenient settings
+            response_data = json.loads(content, strict=False)
             if not isinstance(response_data, dict):
                 raise ValueError("Response must be a JSON object")
             if "reasoning" not in response_data or "card" not in response_data:
@@ -175,7 +182,14 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
 
         # Parse JSON response
         try:
-            response_data = json.loads(model_response.content)
+            # Strip markdown code block markers if present
+            content = model_response.content
+            if content.startswith("```"):
+                content = "\n".join(content.split("\n")[1:-1])
+            # Clean up the content by removing any problematic whitespace
+            content = content.strip()
+            # Parse with more lenient settings
+            response_data = json.loads(content, strict=False)
             if not isinstance(response_data, dict):
                 raise ValueError("Response must be a JSON object")
             if "reasoning" not in response_data or "card" not in response_data:
