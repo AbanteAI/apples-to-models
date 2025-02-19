@@ -55,9 +55,10 @@ def get_player_prompt_template() -> str:
         "Which card from your hand do you think will win this round? "
         "Consider the green card, but also think about what will appeal to the judge. "
         "Play strategically to win! "
-        "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'While Mountains literally match the green card better, Dinosaurs would be more "
-        "exciting and memorable. The judge is likely to appreciate the creative connection | Dinosaurs'"
+        "Respond with a JSON object containing your reasoning and card choice. "
+        'For example: {"reasoning": "While Mountains literally match the green card better, '
+        "Dinosaurs would be more exciting and memorable. The judge is likely to appreciate "
+        'the creative connection", "card": "Dinosaurs"}'
     )
 
 
@@ -65,9 +66,10 @@ JUDGE_PROMPT = (
     "You are the judge this round.\n"
     "Pick whichever red card you like best! You can consider how well it matches the green card, "
     "but you're also free to choose based on creativity, humor, or any other criteria you prefer. "
-    "Respond with your reasoning followed by the card name, separated by ' | '. "
-    "For example: 'While all cards have merit, Dinosaurs wins because it made me laugh thinking about "
-    "a T-Rex trying to do this. It's not the most literal match, but it's the most entertaining | Dinosaurs'"
+    "Respond with a JSON object containing your reasoning and card choice. "
+    'For example: {"reasoning": "While all cards have merit, Dinosaurs wins because it made me '
+    "laugh thinking about a T-Rex trying to do this. It's not the most literal match, but it's "
+    'the most entertaining", "card": "Dinosaurs"}'
 )
 
 

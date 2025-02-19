@@ -207,7 +207,7 @@ async def test_model_log_preservation():
 
         # Create mock responses for different scenarios
         player_valid_response = ModelResponse(
-            content="Good thinking|Silent Movies",  # Will be in player's hand
+            content='{"reasoning": "Good thinking", "card": "Silent Movies"}',  # Will be in player's hand
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -217,7 +217,7 @@ async def test_model_log_preservation():
         )
 
         player_invalid_response = ModelResponse(
-            content="Invalid Card (Winner)",  # Missing separator
+            content="Invalid JSON response",  # Invalid JSON
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -227,7 +227,7 @@ async def test_model_log_preservation():
         )
 
         judge_response = ModelResponse(
-            content="Good choice|Silent Movies",  # Valid judge response
+            content='{"reasoning": "Good choice", "card": "Silent Movies"}',  # Valid judge response
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -323,10 +323,10 @@ async def test_judge_move_with_exact_cards():
     }
     game.rounds = [round]
 
-    # Test case 1: Model responds with proper format
+    # Test case 1: Model responds with proper JSON format
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
-            content="After careful consideration | Queen Elizabeth",
+            content='{"reasoning": "After careful consideration", "card": "Queen Elizabeth"}',
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -340,10 +340,10 @@ async def test_judge_move_with_exact_cards():
         assert thinking == "After careful consideration"
         assert log_path == Path("tests/test.log")
 
-    # Test case 2: Model responds with proper format and punctuation
+    # Test case 2: Model responds with proper JSON format and punctuation
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
-            content="She's very graceful! | Queen Elizabeth.",
+            content='{"reasoning": "She\'s very graceful!", "card": "Queen Elizabeth."}',
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -357,10 +357,10 @@ async def test_judge_move_with_exact_cards():
         assert thinking == "She's very graceful!"
         assert log_path == Path("tests/test.log")
 
-    # Test case 3: Model responds with proper format and different case
+    # Test case 3: Model responds with proper JSON format and different case
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
-            content="Most graceful choice | QUEEN ELIZABETH",
+            content='{"reasoning": "Most graceful choice", "card": "QUEEN ELIZABETH"}',
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -374,7 +374,7 @@ async def test_judge_move_with_exact_cards():
         assert thinking == "Most graceful choice"
         assert log_path == Path("tests/test.log")
 
-    # Test case 4: Model responds without separator
+    # Test case 4: Model responds with invalid JSON
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="Queen Elizabeth is the most graceful choice",
@@ -389,14 +389,14 @@ async def test_judge_move_with_exact_cards():
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert "Model failed to provide valid response" in thinking
-        assert "Response must contain exactly one '|' separator" in thinking
+        assert "Invalid JSON response" in thinking
         assert mock_response.content in thinking  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
 
-    # Test case 5: Model responds with multiple separators
+    # Test case 5: Model responds with JSON missing required fields
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
-            content="First | Second | Third",
+            content='{"thinking": "Most graceful choice"}',  # Missing "card" field
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -408,14 +408,14 @@ async def test_judge_move_with_exact_cards():
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert "Model failed to provide valid response" in thinking
-        assert "Response must contain exactly one '|' separator" in thinking
+        assert "Response must contain 'reasoning' and 'card' fields" in thinking
         assert mock_response.content in thinking  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
 
-    # Test case 6: Model responds with invalid card
+    # Test case 6: Model responds with invalid card in JSON
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
-            content="This is graceful | The Moon",
+            content='{"reasoning": "This is graceful", "card": "The Moon"}',
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
