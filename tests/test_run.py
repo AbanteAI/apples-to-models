@@ -598,7 +598,9 @@ async def test_judge_move_with_exact_cards():
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert "Random selection (model failed:" in thinking
         assert "Invalid JSON response" in thinking
-        assert mock_response.content in thinking  # Raw response should be included
+        assert (
+            "Queen Elizabeth is the most graceful choice" in thinking
+        )  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
 
     # Test case 5: Model responds with JSON missing required fields
