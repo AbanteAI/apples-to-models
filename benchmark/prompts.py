@@ -80,7 +80,6 @@ def create_judge_prompt(
     return (
         f"Current Round {round_num + 1}\n"
         f"You are the judge. The green card is: {green_card}\n"
-        f"The played red cards are:\n{format_cards_list(played_cards)}\n"
         f"{get_judge_prompt_template()}"
     )
 
@@ -123,18 +122,17 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
 
         # Show played cards to all players
         if round.decision:
-            # First, show all played cards
+            # First, show all played cards in bullet point format
             messages.add_user(
-                f"The red cards played for this round were: {', '.join(played_cards)}."
+                f"The played red cards are:\n{format_cards_list(played_cards)}"
             )
 
             # Then show judge's decision process
             if round.judge == player_idx and is_judge:
-                # For the judge, show their prompt and response
+                # For the judge, show their prompt and response (without repeating cards)
                 messages.add_user(
-                    create_judge_prompt(
-                        round.round_number, round.green_card, played_cards
-                    )
+                    f"You are the judge. The green card is: {round.green_card}\n"
+                    f"{get_judge_prompt_template()}"
                 )
                 messages.add_assistant(
                     f"{round.decision.reasoning} | {round.decision.winning_card}"
