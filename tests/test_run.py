@@ -205,9 +205,9 @@ async def test_model_log_preservation():
         # Set up the game directory as environment variable
         os.environ["GAME_LOG_DIR"] = os.path.join(temp_dir, "model_logs")
 
-        # Create mock responses - one valid, one invalid
-        valid_response = ModelResponse(
-            content="Good thinking|Mountains",
+        # Create mock responses for different scenarios
+        player_valid_response = ModelResponse(
+            content="Good thinking|Silent Movies",  # Will be in player's hand
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -216,7 +216,7 @@ async def test_model_log_preservation():
             log_path=Path(os.path.join(temp_dir, "model_logs", "valid_response.log")),
         )
 
-        invalid_response = ModelResponse(
+        player_invalid_response = ModelResponse(
             content="Invalid Card (Winner)",  # Missing separator
             model="test-model",
             tokens_prompt=10,
@@ -226,8 +226,27 @@ async def test_model_log_preservation():
             log_path=Path(os.path.join(temp_dir, "model_logs", "invalid_response.log")),
         )
 
-        # Create a mock that alternates between valid and invalid responses
-        responses = [valid_response, invalid_response]
+        judge_response = ModelResponse(
+            content="Good choice|Silent Movies",  # Valid judge response
+            model="test-model",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-3",
+            log_path=Path(os.path.join(temp_dir, "model_logs", "judge_response.log")),
+        )
+
+        # Create a mock that cycles through responses in a specific order:
+        # 1. Player 1's valid move
+        # 2. Judge's response
+        # 3. Player 1's invalid move
+        # 4. Judge's response
+        responses = [
+            player_valid_response,
+            judge_response,
+            player_invalid_response,
+            judge_response,
+        ]
         response_index = 0
 
         async def mock_call_model(*args, **kwargs):
@@ -252,15 +271,15 @@ async def test_model_log_preservation():
             round1 = game.rounds[0]
             if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
                 move = round1.moves[0]
-                assert move.log_path == valid_response.log_path
-                assert "Mountains" in move.played_card
+                assert move.log_path == player_valid_response.log_path
+                assert "Silent Movies" in move.played_card
                 assert "Good thinking" in move.thinking
 
             # Check second round (invalid response)
             round2 = game.rounds[1]
             if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
                 move = round2.moves[0]
-                assert move.log_path == invalid_response.log_path
+                assert move.log_path == player_invalid_response.log_path
                 assert "Random selection" in move.thinking
                 assert "Invalid Card (Winner)" in move.thinking
 
