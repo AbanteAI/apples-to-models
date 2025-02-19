@@ -76,8 +76,8 @@ class Player(BaseModel):
     won_rounds: List[int] = Field(default_factory=list)
 
 
-class GameStats(BaseModel):
-    """Tracks game-wide statistics including timing and model usage"""
+class BenchmarkStats(BaseModel):
+    """Tracks benchmark statistics including timing and model usage"""
 
     start_time: Optional[float] = None
     end_time: Optional[float] = None
@@ -112,7 +112,7 @@ class Game(BaseModel):
     total_rounds: int  # Total number of rounds to be played
     red_deck: Deck = Field(default_factory=Deck)
     green_deck: Deck = Field(default_factory=Deck)
-    game_stats: GameStats = Field(default_factory=GameStats)
+    benchmark_stats: BenchmarkStats = Field(default_factory=BenchmarkStats)
 
     @classmethod
     def new_game(
@@ -184,10 +184,10 @@ class Game(BaseModel):
         except ValueError:
             raise ValueError("No more red cards in deck")
 
-        # Update model stats if response provided
+        # Update benchmark stats if response provided
         log_path = Path("benchmark/logs/no_log.txt")  # Default path for random moves
         if model_response:
-            self.model_stats.add_response(model_response)
+            self.benchmark_stats.add_response(model_response)
             log_path = model_response.log_path or log_path
 
         # Record the move
@@ -233,10 +233,10 @@ class Game(BaseModel):
         if winning_player is None:
             raise ValueError(f"Card '{winning_card}' was not played this round")
 
-        # Update model stats if response provided
+        # Update benchmark stats if response provided
         log_path = Path("benchmark/logs/no_log.txt")  # Default path for random moves
         if model_response:
-            self.model_stats.add_response(model_response)
+            self.benchmark_stats.add_response(model_response)
             log_path = model_response.log_path or log_path
 
         # Record the decision
