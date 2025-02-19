@@ -456,7 +456,7 @@ async def test_judge_move_with_exact_cards():
         mock_call.return_value = mock_response
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert "Model failed to provide valid response" in thinking
+        assert "Random selection (model failed:" in thinking
         assert "Invalid JSON response" in thinking
         assert mock_response.content in thinking  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
@@ -475,7 +475,7 @@ async def test_judge_move_with_exact_cards():
         mock_call.return_value = mock_response
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert "Model failed to provide valid response" in thinking
+        assert "Random selection (model failed:" in thinking
         assert "Response must contain 'reasoning' and 'card' fields" in thinking
         assert mock_response.content in thinking  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
@@ -494,7 +494,7 @@ async def test_judge_move_with_exact_cards():
         mock_call.return_value = mock_response
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert "Model failed to provide valid response" in thinking
-        assert "Could not find matching card" in thinking
+        assert "Random selection (model failed:" in thinking
+        assert "which is not in valid cards" in thinking
         assert mock_response.content in thinking  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved

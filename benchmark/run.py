@@ -127,21 +127,31 @@ def parse_model_response(content: str) -> tuple[str, str]:
         raise ValueError(f"Invalid JSON response: {e}")
 
 
-async def model_player_move(
-    game: Game, player_idx: int, model: str
+async def handle_model_interaction(
+    model: str,
+    messages: "Messages",
+    valid_cards: list[str],
+    role: str,
+    fallback_fn: callable,
+    fallback_args: tuple,
 ) -> tuple[str, str, Optional[Path]]:
-    """Make a model-based move for the given player"""
+    """Handle model interaction with error handling and fallback.
 
+    Args:
+        model: The model to use
+        messages: The messages to send to the model
+        valid_cards: List of valid cards that can be chosen
+        role: Role string for error messages ("player" or "judge")
+        fallback_fn: Function to call for random fallback
+        fallback_args: Arguments to pass to fallback function
+
+    Returns:
+        A tuple of (chosen_card, thinking, log_path)
+    """
     from benchmark.model_utils import call_model
-    from benchmark.prompts import create_player_messages
-
-    player = game.players[player_idx]
-    round = game.rounds[-1]
-    green_card = round.green_card
 
     model_response = None
     try:
-        messages = create_player_messages(game, player_idx, green_card, player.hand)
         model_response = await call_model(model, messages)
 
         # Parse JSON response
@@ -150,24 +160,27 @@ async def model_player_move(
         except ValueError as e:
             raise ValueError(str(e))
 
-        # Normalize the chosen card and player's hand
+        # Normalize the chosen card and find match in valid cards
         normalized_card = normalize_card_name(card)
-        # Find the matching card from the hand using normalized comparison
-        for original_card in player.hand:
-            if normalize_card_name(original_card) == normalized_card:
-                card = original_card
+        for valid_card in valid_cards:
+            if normalize_card_name(valid_card) == normalized_card:
+                card = valid_card
                 break
         else:
-            raise ValueError(f"Model chose card '{card}' which is not in player's hand")
+            valid_cards_str = ", ".join(valid_cards)
+            raise ValueError(
+                f"Model chose card '{card}' which is not in valid cards: {valid_cards_str}"
+            )
 
         return card, thinking, model_response.log_path
+
     except Exception as e:
         # Fallback to random selection if model fails, but preserve the log if we have it
         error_msg = str(e)
         if model_response:
             error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
-            print(f"\nError parsing player response: {error_msg}")
-            card, thinking, _ = random_player_move(game, player_idx)
+            print(f"\nError parsing {role} response: {error_msg}")
+            card, thinking, _ = fallback_fn(*fallback_args)
             return (
                 card,
                 f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
@@ -175,17 +188,34 @@ async def model_player_move(
             )
         else:
             # Model call itself failed
-            print(
-                f"Model error for player {player_idx + 1}, falling back to random: {str(e)}"
-            )
-            card, thinking, _ = random_player_move(game, player_idx)
+            print(f"Model error for {role}, falling back to random: {str(e)}")
+            card, thinking, _ = fallback_fn(*fallback_args)
             return card, thinking, None
+
+
+async def model_player_move(
+    game: Game, player_idx: int, model: str
+) -> tuple[str, str, Optional[Path]]:
+    """Make a model-based move for the given player"""
+    from benchmark.prompts import create_player_messages
+
+    player = game.players[player_idx]
+    round = game.rounds[-1]
+    green_card = round.green_card
+
+    messages = create_player_messages(game, player_idx, green_card, player.hand)
+    return await handle_model_interaction(
+        model=model,
+        messages=messages,
+        valid_cards=player.hand,
+        role="player",
+        fallback_fn=random_player_move,
+        fallback_args=(game, player_idx),
+    )
 
 
 async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
     """Make a model-based judging decision"""
-
-    from benchmark.model_utils import call_model
     from benchmark.prompts import create_judge_messages
 
     round = game.rounds[-1]
@@ -193,45 +223,19 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
     played_cards = [move.played_card for move in moves.values()]
     messages = create_judge_messages(game, round.judge)
 
-    model_response = None
-    try:
-        model_response = await call_model(model, messages)
+    def random_judge_move(game: Game, _: int) -> tuple[str, str, Optional[Path]]:
+        """Helper function to match the signature expected by handle_model_interaction"""
+        winning_move = random.choice(list(moves.values()))
+        return winning_move.played_card, "Random selection", None
 
-        # Parse JSON response
-        try:
-            thinking, card = parse_model_response(model_response.content)
-        except ValueError as e:
-            raise ValueError(str(e))
-
-        # Normalize card name and find match
-        normalized_card = normalize_card_name(card)
-        for played_card in played_cards:
-            if normalize_card_name(played_card) == normalized_card:
-                card = played_card
-                break
-        else:
-            raise ValueError(
-                f"Could not find matching card '{card}' among played cards: {played_cards}"
-            )
-
-        return card, thinking, model_response.log_path
-
-    except Exception as e:
-        # If we have a model response but failed to parse it, include the raw response
-        if model_response:
-            error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
-            print(f"\nError parsing judge response: {error_msg}")
-            winning_move = random.choice(list(moves.values()))
-            return winning_move.played_card, error_msg, model_response.log_path
-        else:
-            # Model call itself failed
-            print(f"Model error for judge, falling back to random: {str(e)}")
-            winning_move = random.choice(list(moves.values()))
-            return (
-                winning_move.played_card,
-                f"Random selection (model failed: {str(e)})",
-                None,
-            )
+    return await handle_model_interaction(
+        model=model,
+        messages=messages,
+        valid_cards=played_cards,
+        role="judge",
+        fallback_fn=random_judge_move,
+        fallback_args=(game, round.judge),
+    )
 
 
 async def run_game(
