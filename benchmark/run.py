@@ -13,6 +13,8 @@ from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game, JudgeDecision
 from benchmark.game_report import save_html_report
+from benchmark.model_utils import call_model
+from benchmark.prompts import create_judge_messages, create_player_messages
 
 # Create games directory if it doesn't exist
 GAMES_DIR = Path(__file__).parent / "games"
@@ -131,10 +133,6 @@ async def model_player_move(
     game: Game, player_idx: int, model: str
 ) -> tuple[str, str, Optional[Path]]:
     """Make a model-based move for the given player"""
-
-    from benchmark.model_utils import call_model
-    from benchmark.prompts import create_player_messages
-
     player = game.players[player_idx]
     round = game.rounds[-1]
     green_card = round.green_card
@@ -184,10 +182,6 @@ async def model_player_move(
 
 async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
     """Make a model-based judging decision"""
-
-    from benchmark.model_utils import call_model
-    from benchmark.prompts import create_judge_messages
-
     round = game.rounds[-1]
     moves = round.moves
     played_cards = [move.played_card for move in moves.values()]
