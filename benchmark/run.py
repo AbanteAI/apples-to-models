@@ -13,7 +13,7 @@ from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game, JudgeDecision
 from benchmark.game_report import save_html_report
-from benchmark.model_utils import call_model
+from benchmark.model_utils import Messages, call_model
 from benchmark.prompts import create_judge_messages, create_player_messages
 
 # Create games directory if it doesn't exist
