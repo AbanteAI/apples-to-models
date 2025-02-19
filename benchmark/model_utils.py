@@ -23,9 +23,11 @@ class ModelResponse(BaseModel):
     """Response data from a model call including content and usage statistics."""
 
     content: str
+    model: str
     tokens_prompt: int
     tokens_completion: int
     total_cost: float
+    duration: float
     generation_id: str
     log_path: Optional[Path] = None
 
@@ -33,9 +35,11 @@ class ModelResponse(BaseModel):
         """Return a human-readable string representation."""
         return (
             f"ModelResponse(content='{self.content}', "
+            f"model='{self.model}', "
             f"tokens_prompt={self.tokens_prompt}, "
             f"tokens_completion={self.tokens_completion}, "
             f"total_cost=${self.total_cost:.6f}, "
+            f"duration={self.duration:.2f}s, "
             f"generation_id='{self.generation_id}', "
             f"log_path='{self.log_path}')"
         )
@@ -202,9 +206,11 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
 
     return ModelResponse(
         content=content,
+        model=model,
         tokens_prompt=stats["tokens_prompt"],
         tokens_completion=stats["tokens_completion"],
         total_cost=stats["total_cost"],
+        duration=duration,
         generation_id=generation_id,
         log_path=log_path,
     )
