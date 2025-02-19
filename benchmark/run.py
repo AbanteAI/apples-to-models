@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import os
 import random
+import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -216,8 +217,6 @@ async def run_game(
         ]
         game = Game.new_game(player_names, total_rounds=num_rounds)
         # Start tracking time for new games
-        import time
-
         game.model_stats.start_time = time.time()
 
     # Run rounds until target is reached
