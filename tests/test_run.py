@@ -197,6 +197,84 @@ def test_normalize_card_name():
 
 
 @pytest.mark.asyncio
+async def test_model_log_preservation():
+    """Test that model logs are preserved when model responses are invalid"""
+    # Create a temporary directory for the game
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Set up the game directory as environment variable
+        os.environ["GAME_LOG_DIR"] = os.path.join(temp_dir, "model_logs")
+
+        # Create mock responses - one valid, one invalid
+        valid_response = ModelResponse(
+            content="Good thinking|Mountains",
+            model="test-model",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-1",
+            log_path=Path(os.path.join(temp_dir, "model_logs", "valid_response.log")),
+        )
+
+        invalid_response = ModelResponse(
+            content="Invalid Card (Winner)",  # Missing separator
+            model="test-model",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-2",
+            log_path=Path(os.path.join(temp_dir, "model_logs", "invalid_response.log")),
+        )
+
+        # Create a mock that alternates between valid and invalid responses
+        responses = [valid_response, invalid_response]
+        response_index = 0
+
+        async def mock_call_model(*args, **kwargs):
+            nonlocal response_index
+            response = responses[response_index]
+            response_index = (response_index + 1) % len(responses)
+            return response
+
+        # Run a game with the mock
+        with patch("benchmark.model_utils.call_model", new=mock_call_model):
+            game = await run_game(
+                num_rounds=2,
+                num_players=2,
+                models=["gpt-4", "random"],
+                save_game_path=os.path.join(temp_dir, "game_state.json"),
+            )
+
+            # Check that both rounds were completed
+            assert len(game.rounds) == 2
+
+            # Check first round (valid response)
+            round1 = game.rounds[0]
+            if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
+                move = round1.moves[0]
+                assert move.log_path == valid_response.log_path
+                assert "Mountains" in move.played_card
+                assert "Good thinking" in move.thinking
+
+            # Check second round (invalid response)
+            round2 = game.rounds[1]
+            if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
+                move = round2.moves[0]
+                assert move.log_path == invalid_response.log_path
+                assert "Random selection" in move.thinking
+                assert "Invalid Card (Winner)" in move.thinking
+
+            # Verify that the HTML report contains links to both logs
+            report_path = os.path.join(temp_dir, "game_report.html")
+            with open(report_path) as f:
+                report_content = f.read()
+                assert str(valid_response.log_path) in report_content
+                assert str(invalid_response.log_path) in report_content
+                assert (
+                    "no_log.txt" not in report_content
+                )  # Should not use no_log.txt for model failures
+
+
+@pytest.mark.asyncio
 async def test_judge_move_with_exact_cards():
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
