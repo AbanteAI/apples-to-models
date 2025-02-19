@@ -309,6 +309,9 @@ def test_game_history_visibility():
     assert_content_contains(player1_view, "The played red cards are:")
     assert_content_contains(player1_view, "- Ice")
     assert_content_contains(player1_view, "- Winter")
+    # Should see their own reasoning as judge
+    assert_content_contains(player1_view, "Your judgement was:")
+    assert_content_contains(player1_view, "You selected 'Ice' as the winner.")
 
     # Test Player 2's view (winner of first round, judge in second)
     messages = create_judge_messages(game, 1)
@@ -347,3 +350,9 @@ def test_game_history_visibility():
     # Should not see other players' thinking
     assert "Fire is extremely hot" not in player3_view
     assert "Ice is frozen water" not in player3_view
+    # Should not see judge's reasoning
+    assert "Ice is literally frozen and therefore the coldest" not in player3_view
+    # Should only see the decision
+    assert_content_contains(
+        player3_view, "Player 1 (judge) selected 'Ice' as the winner."
+    )
