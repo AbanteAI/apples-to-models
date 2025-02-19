@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -329,52 +329,53 @@ async def test_model_log_preservation(mock_call_model):
 
         mock_call_model.side_effect = cycle_responses
         game = await run_game(
-                num_rounds=2,
-                num_players=2,
-                models=["gpt-4", "gpt-4"],  # Make both players use the model
-                save_game_path=os.path.join(temp_dir, "game_state.json"),
-            )
+            num_rounds=2,
+            num_players=2,
+            models=["gpt-4", "gpt-4"],  # Make both players use the model
+            save_game_path=os.path.join(temp_dir, "game_state.json"),
+        )
 
-            # Check that both rounds were completed
-            assert len(game.rounds) == 2
+        # Check that both rounds were completed
+        assert len(game.rounds) == 2
 
-            # Check first round (valid response)
-            round1 = game.rounds[0]
-            if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
-                move = round1.moves[0]
-                assert move.log_path == player_valid_response.log_path
-                assert "Silent Movies" in move.played_card
-                assert "Good thinking" in move.thinking
-            elif round1.decision:  # If player 1 was judge
-                assert round1.decision.log_path == judge_response.log_path
-                assert "Good choice" in round1.decision.reasoning
+        # Check first round (valid response)
+        round1 = game.rounds[0]
+        if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
+            move = round1.moves[0]
+            assert move.log_path == player_valid_response.log_path
+            assert "Silent Movies" in move.played_card
+            assert "Good thinking" in move.thinking
+        elif round1.decision:  # If player 1 was judge
+            assert round1.decision.log_path == judge_response.log_path
+            assert "Good choice" in round1.decision.reasoning
 
-            # Check second round (invalid response)
-            round2 = game.rounds[1]
-            if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
-                move = round2.moves[0]
-                assert move.log_path == player_invalid_response.log_path
-                assert "Random selection" in move.thinking
-                assert "Invalid JSON response" in move.thinking
-            elif round2.decision:  # If player 1 was judge
-                assert round2.decision.log_path == judge_response.log_path
-                assert "Good choice" in round2.decision.reasoning
+        # Check second round (invalid response)
+        round2 = game.rounds[1]
+        if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
+            move = round2.moves[0]
+            assert move.log_path == player_invalid_response.log_path
+            assert "Random selection" in move.thinking
+            assert "Invalid JSON response" in move.thinking
+        elif round2.decision:  # If player 1 was judge
+            assert round2.decision.log_path == judge_response.log_path
+            assert "Good choice" in round2.decision.reasoning
 
-            # Verify that the HTML report contains links to both logs
-            state_path = os.path.join(temp_dir, "game_state.json")
-            report_path = os.path.splitext(state_path)[0] + ".html"
-            with open(report_path) as f:
-                report_content = f.read()
-                assert str(player_valid_response.log_path) in report_content
-                assert str(player_invalid_response.log_path) in report_content
-                assert (
-                    "no_log.txt" not in report_content
-                )  # Should not use no_log.txt for model failures
+        # Verify that the HTML report contains links to both logs
+        state_path = os.path.join(temp_dir, "game_state.json")
+        report_path = os.path.splitext(state_path)[0] + ".html"
+        with open(report_path) as f:
+            report_content = f.read()
+            assert str(player_valid_response.log_path) in report_content
+            assert str(player_invalid_response.log_path) in report_content
+            assert (
+                "no_log.txt" not in report_content
+            )  # Should not use no_log.txt for model failures
 
 
 @pytest.mark.asyncio
 @patch.dict(os.environ, {"OPEN_ROUTER_KEY": "test-key"})
-async def test_judge_move_with_exact_cards():
+@patch("benchmark.run.call_model")  # Patch before it's imported in run.py
+async def test_judge_move_with_exact_cards(mock_call_model):
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
     game = Game.new_game(["Player 1", "Player 2", "Player 3"], total_rounds=6)
