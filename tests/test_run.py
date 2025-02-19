@@ -565,17 +565,35 @@ async def test_judge_move_with_exact_cards():
         assert log_path == Path("tests/test.log")
 
     # Test case 4: Model responds with invalid JSON
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content="Queen Elizabeth is the most graceful choice",
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-4",
-            log_path=Path("tests/test.log"),
+    mock_completion = AsyncMock()
+    mock_completion.choices = [
+        AsyncMock(
+            message=AsyncMock(content="Queen Elizabeth is the most graceful choice")
         )
-        mock_call.return_value = mock_response
+    ]
+    mock_completion.id = "test-id-4"
+
+    mock_chat = AsyncMock()
+    mock_chat.completions.create = AsyncMock(return_value=mock_completion)
+
+    mock_client = AsyncMock()
+    mock_client.chat = mock_chat
+
+    async def mock_get_stats_case4(*args, **kwargs):
+        return {
+            "data": {
+                "id": "test-id-4",
+                "tokens_prompt": 10,
+                "tokens_completion": 5,
+                "total_cost": 0.0001,
+                "model": "test-model",
+                "log_path": Path("tests/test.log"),
+            }
+        }
+
+    with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
+        "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats_case4):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert "Random selection (model failed:" in thinking
