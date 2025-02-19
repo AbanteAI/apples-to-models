@@ -295,9 +295,13 @@ def test_game_history_visibility():
         player1_view, "Ice is literally frozen and therefore the coldest"
     )
     # Should see winning player's identity
-    assert_content_contains(player1_view, "Player 2 played: Ice (Winner)")
-    # Should see other cards anonymously
-    assert_content_contains(player1_view, "Someone played: Winter")
+    assert_content_contains(
+        player1_view, "Player 2 played the Ice card, and won this round!"
+    )
+    # Should see all played cards listed together
+    assert_content_contains(
+        player1_view, "The red cards played for this round were: Ice, Winter."
+    )
 
     # Test Player 2's view (winner of first round, judge in second)
     messages = create_judge_messages(game, 1)
