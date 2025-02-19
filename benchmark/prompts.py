@@ -54,14 +54,13 @@ def get_player_prompt_template() -> str:
     )
 
 
-def get_judge_prompt_template() -> str:
-    """Get the template for judge prompts."""
-    return (
-        "Which red card best matches the green card? "
-        "Respond with your reasoning followed by the card name, separated by ' | '. "
-        "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
-        "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
-    )
+JUDGE_PROMPT = (
+    "You are the judge this round.\n"
+    "Which red card best matches the green card? "
+    "Respond with your reasoning followed by the card name, separated by ' | '. "
+    "For example: 'After comparing all options, Dinosaurs stands out the most. While both Mountains and Whales "
+    "are impressively large, Dinosaurs capture the essence of enormity in a way that sparks imagination | Dinosaurs'"
+)
 
 
 def create_player_prompt(player_idx: int, green_card: str, hand: List[str]) -> str:
@@ -70,18 +69,6 @@ def create_player_prompt(player_idx: int, green_card: str, hand: List[str]) -> s
         f"You are Player {player_idx + 1}. The green card is: {green_card}\n"
         f"Your hand (red cards) contains: {', '.join(hand)}\n"
         f"{get_player_prompt_template()}"
-    )
-
-
-def create_judge_prompt(
-    round_num: int, green_card: str, played_cards: List[str]
-) -> str:
-    """Create the prompt for a judge to select a winning card."""
-    return (
-        f"Current Round {round_num + 1}\n"
-        f"You are the judge. The green card is: {green_card}\n"
-        f"The played red cards are:\n{format_cards_list(played_cards)}\n"
-        f"{get_judge_prompt_template()}"
     )
 
 
@@ -123,49 +110,45 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
 
         # Show played cards to all players
         if round.decision:
-            # For completed rounds, show anonymous cards except for the winner
-            winning_card = round.decision.winning_card
-            for pid, move in round.moves.items():
-                if pid != player_idx:  # Don't repeat current player's move
-                    if move.played_card == winning_card:
-                        messages.add_user(
-                            f"Player {pid + 1} played: {move.played_card} (Winner)"
-                        )
-                    else:
-                        messages.add_user(f"Someone played: {move.played_card}")
-        # For current round, show anonymous list to non-judges
-        elif not round.decision and player_idx != round.judge:
+            # First, show all played cards in bullet point format
             messages.add_user(
                 f"The played red cards are:\n{format_cards_list(played_cards)}"
             )
 
-        # Show judge's decision
-        if round.decision:
-            if round.judge == player_idx:
-                if is_judge:
-                    # Show the cards and prompt before showing judge's decision
-                    messages.add_user(
-                        create_judge_prompt(
-                            round.round_number, round.green_card, played_cards
-                        )
-                    )
-                    messages.add_assistant(
-                        f"{round.decision.reasoning} | {round.decision.winning_card}"
-                    )
-                else:
-                    messages.add_user(
-                        f"You (as judge) selected '{round.decision.winning_card}' as the winner.\n"
-                        f"Your reasoning: {round.decision.reasoning}"
-                    )
+            # Then show judge's decision process
+            if round.judge == player_idx and is_judge:
+                # For the judge, show their prompt and response (without repeating cards)
+                messages.add_user(JUDGE_PROMPT)
+                messages.add_assistant(
+                    f"{round.decision.reasoning} | {round.decision.winning_card}"
+                )
             else:
+                # For others, show the judge's reasoning
+                judge_text = (
+                    "Your"
+                    if round.judge == player_idx
+                    else f"Player {round.judge + 1}'s"
+                )
                 messages.add_user(
-                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner.\n"
-                    f"Their reasoning: {round.decision.reasoning}"
+                    f"{judge_text} judgement was:\n\n"
+                    f"{round.decision.reasoning}\n\n"
+                    f"Player {round.judge + 1} (judge) selected '{round.decision.winning_card}' as the winner."
                 )
 
-            # Show scores after the decision, up to the current round
+            # Finally, show who played the winning card and the scores
+            for pid, move in round.moves.items():
+                if move.played_card == round.decision.winning_card:
+                    winner_text = "you" if pid == player_idx else f"Player {pid + 1}"
+                    messages.add_user(
+                        f"{winner_text} played the {move.played_card} card, and won this round!\n\n"
+                        f"Scores:\n{format_scores(game, player_idx, round.round_number)}"
+                    )
+                    break
+
+        # For current round, show anonymous list to non-judges
+        elif not round.decision and player_idx != round.judge:
             messages.add_user(
-                f"\nScores:\n{format_scores(game, player_idx, round.round_number)}\n"
+                f"The played red cards are:\n{format_cards_list(played_cards)}"
             )
 
     return messages
@@ -205,10 +188,11 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
     # Add current round prompt
     current_round = game.rounds[-1]
     played_cards = [move.played_card for move in current_round.moves.values()]
-    messages.add_user(
-        create_judge_prompt(
-            current_round.round_number, current_round.green_card, played_cards
-        )
-    )
+
+    # Show played cards in bullet point format
+    messages.add_user(f"The played red cards are:\n{format_cards_list(played_cards)}")
+
+    # Add judge prompt
+    messages.add_user(JUDGE_PROMPT)
 
     return messages

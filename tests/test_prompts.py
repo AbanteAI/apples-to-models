@@ -8,7 +8,6 @@ from benchmark.game import Game, JudgeDecision, PlayerMove, Round
 from benchmark.prompts import (
     create_judge_messages,
     create_player_messages,
-    get_judge_prompt_template,
     get_player_prompt_template,
 )
 
@@ -115,12 +114,18 @@ def test_create_judge_messages_basic():
     system_content = get_message_content(messages.messages[0])
     assert_content_contains(system_content, "You are playing Apples to Apples")
 
-    # Check current round prompt
-    last_content = get_message_content(messages.messages[-1])
-    assert_content_contains(last_content, "You are the judge")
-    assert_content_contains(last_content, "Mountain")
-    assert_content_contains(last_content, "Skyscraper")
-    assert_content_contains(last_content, get_judge_prompt_template())
+    # Check played cards message
+    cards_message = get_message_content(messages.messages[-2])
+    assert_content_contains(cards_message, "The played red cards are:")
+    assert_content_contains(cards_message, "- Mountain")
+    assert_content_contains(cards_message, "- Skyscraper")
+
+    # Check judge prompt
+    prompt_message = get_message_content(messages.messages[-1])
+    assert_content_contains(prompt_message, "You are the judge this round")
+    assert_content_contains(
+        prompt_message, "Which red card best matches the green card?"
+    )
 
 
 def test_create_judge_messages_with_history():
@@ -175,12 +180,18 @@ def test_create_judge_messages_with_history():
     assert_content_contains(history, "Spider")
     assert_content_contains(history, "Ghosts are the scariest")
 
-    # Check current round
-    last_content = get_message_content(messages.messages[-1])
-    assert_content_contains(last_content, "Round 2")
-    assert_content_contains(last_content, "Happy")
-    assert_content_contains(last_content, "Puppy")
-    assert_content_contains(last_content, "Birthday")
+    # Check played cards message
+    cards_message = get_message_content(messages.messages[-2])
+    assert_content_contains(cards_message, "The played red cards are:")
+    assert_content_contains(cards_message, "- Puppy")
+    assert_content_contains(cards_message, "- Birthday")
+
+    # Check judge prompt
+    prompt_message = get_message_content(messages.messages[-1])
+    assert_content_contains(prompt_message, "You are the judge this round")
+    assert_content_contains(
+        prompt_message, "Which red card best matches the green card?"
+    )
 
 
 def test_player_perspective_in_history():
@@ -295,9 +306,13 @@ def test_game_history_visibility():
         player1_view, "Ice is literally frozen and therefore the coldest"
     )
     # Should see winning player's identity
-    assert_content_contains(player1_view, "Player 2 played: Ice (Winner)")
-    # Should see other cards anonymously
-    assert_content_contains(player1_view, "Someone played: Winter")
+    assert_content_contains(
+        player1_view, "Player 2 played the Ice card, and won this round!"
+    )
+    # Should see all played cards listed together
+    assert_content_contains(player1_view, "The played red cards are:")
+    assert_content_contains(player1_view, "- Ice")
+    assert_content_contains(player1_view, "- Winter")
 
     # Test Player 2's view (winner of first round, judge in second)
     messages = create_judge_messages(game, 1)
@@ -305,10 +320,14 @@ def test_game_history_visibility():
 
     # Should see their own thinking from winning move
     assert_content_contains(player2_view, "Ice is frozen water")
-    # Should see their own card marked as winner
-    assert_content_contains(player2_view, "Ice (Winner)")
-    # Should see other cards anonymously
-    assert_content_contains(player2_view, "Someone played: Winter")
+    # Should see all played cards listed together
+    assert_content_contains(player2_view, "The played red cards are:")
+    assert_content_contains(player2_view, "- Ice")
+    assert_content_contains(player2_view, "- Winter")
+    # Should see they won the round
+    assert_content_contains(
+        player2_view, "you played the Ice card, and won this round!"
+    )
     # Should see current round cards anonymously
     assert_content_contains(player2_view, "Fire")
     assert_content_contains(player2_view, "Desert")
@@ -319,8 +338,14 @@ def test_game_history_visibility():
 
     # Should see their own thinking
     assert_content_contains(player3_view, "Winter is the coldest season")
-    # Should see winning player's identity
-    assert_content_contains(player3_view, "Player 2 played: Ice (Winner)")
+    # Should see all played cards listed together
+    assert_content_contains(player3_view, "The played red cards are:")
+    assert_content_contains(player3_view, "- Ice")
+    assert_content_contains(player3_view, "- Winter")
+    # Should see who won the round
+    assert_content_contains(
+        player3_view, "Player 2 played the Ice card, and won this round!"
+    )
     # Should see current round cards anonymously
     assert_content_contains(player3_view, "The played red cards are:")
     # Should not see other players' thinking
