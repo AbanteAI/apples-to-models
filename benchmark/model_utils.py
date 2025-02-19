@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional
@@ -76,7 +77,6 @@ def write_model_log(
     cost: float,
     duration: float,
     log_dir: Optional[str] = None,
-    identifier: Optional[str] = None,
 ) -> Path:
     """Write a log file with model call information.
 
@@ -87,7 +87,6 @@ def write_model_log(
         cost: The cost of the model call
         duration: The duration of the model call in seconds
         log_dir: Optional directory to write logs to (defaults to env var or benchmark/logs)
-        identifier: Optional identifier to make log filename unique (e.g., 'player1', 'judge')
 
     Returns:
         Path: The path to the written log file
@@ -97,11 +96,9 @@ def write_model_log(
     log_dir_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Include identifier in filename if provided
-    filename = f"model_call_{timestamp}"
-    if identifier:
-        filename += f"_{identifier}"
-    filename += ".log"
+    # Generate a short random key for uniqueness
+    random_key = str(uuid.uuid4())[:8]
+    filename = f"model_call_{timestamp}_{random_key}.log"
     log_file = log_dir_path / filename
 
     with open(log_file, "w", encoding="utf-8") as f:
@@ -157,16 +154,13 @@ async def get_generation_stats(generation_id: str, api_key: str) -> dict:
 
 
 @async_retry(tries=5, delay=0.1, backoff=2)
-async def call_model(
-    model: str, messages: Messages, identifier: Optional[str] = None
-) -> ModelResponse:
+async def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     Call a model through OpenRouter API with the given messages.
 
     Args:
         model: The model identifier to use
         messages: A Messages instance containing the conversation
-        identifier: Optional identifier to make log filename unique (e.g., 'player1', 'judge')
 
     Returns:
         A ModelResponse object containing the response content and usage statistics

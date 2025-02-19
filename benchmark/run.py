@@ -107,9 +107,7 @@ async def model_player_move(
 
     try:
         messages = create_player_messages(game, player_idx, green_card, player.hand)
-        model_response = await call_model(
-            model, messages, identifier=f"player{player_idx + 1}"
-        )
+        model_response = await call_model(model, messages)
         thinking, card = model_response.content.split("|", 1)
         thinking = thinking.strip()
 
@@ -145,9 +143,7 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
 
     model_response = None
     try:
-        model_response = await call_model(
-            model, messages, identifier=f"judge{round.judge + 1}"
-        )
+        model_response = await call_model(model, messages)
         # Require exactly one separator
         if model_response.content.count("|") != 1:
             raise ValueError(

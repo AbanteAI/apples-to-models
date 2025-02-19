@@ -63,42 +63,38 @@ def test_write_model_log(tmp_path):
         assert "Cost: $0.0010" in content
 
 
-def test_write_model_log_with_identifier(tmp_path):
+def test_write_model_log_uniqueness(tmp_path):
     messages = Messages()
     messages.add_system("Test system message")
 
-    # Write logs with different identifiers
+    # Write multiple logs in quick succession
     log_path1 = write_model_log(
         model="test-model",
         messages=messages,
-        response="Player 1 response",
+        response="First response",
         cost=0.001,
         duration=1.0,
         log_dir=str(tmp_path),
-        identifier="player1",
     )
 
     log_path2 = write_model_log(
         model="test-model",
         messages=messages,
-        response="Player 2 response",
+        response="Second response",
         cost=0.001,
         duration=1.0,
         log_dir=str(tmp_path),
-        identifier="player2",
     )
 
     # Verify logs exist and have different paths
     assert log_path1.exists() and log_path2.exists()
     assert log_path1 != log_path2
-    assert "player1" in log_path1.name
-    assert "player2" in log_path2.name
 
     # Verify content is correct for each log
     with open(log_path1) as f:
         content1 = f.read()
-        assert "Player 1 response" in content1
+        assert "First response" in content1
 
     with open(log_path2) as f:
         content2 = f.read()
-        assert "Player 2 response" in content2
+        assert "Second response" in content2
