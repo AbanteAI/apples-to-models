@@ -34,7 +34,7 @@ def create_system_message(total_players: int, player_number: int) -> str:
     return (
         "You are playing Apples to Apples, a competitive word association game. "
         f"There are {total_players} players in the game, and you are Player {player_number}. "
-        "The game will continue until someone wins 4 rounds. "
+        "The game consists of a fixed number of rounds, and the player with the most wins at the end is the winner. "
         "In each round, there is a green card (an adjective) and players play red cards (nouns). "
         "Your goal is to win by playing cards that the judge will select, not necessarily the ones "
         "that match the green card most literally. Think strategically about what will appeal to the judge!"
