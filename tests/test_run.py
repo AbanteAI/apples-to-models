@@ -63,7 +63,6 @@ async def test_run_game(mock_call_model):
         tokens_prompt=10,
         tokens_completion=5,
         total_cost=0.0001,
-        duration=0.5,
         generation_id="test-id-run",
         log_path=Path("tests/test.log"),
     )
@@ -233,7 +232,6 @@ async def test_judge_move_with_exact_cards():
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            duration=0.5,
             generation_id="test-id",
             log_path=Path("tests/test.log"),
         )
@@ -251,7 +249,6 @@ async def test_judge_move_with_exact_cards():
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            duration=0.5,
             generation_id="test-id-2",
             log_path=Path("tests/test.log"),
         )
@@ -269,7 +266,6 @@ async def test_judge_move_with_exact_cards():
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            duration=0.5,
             generation_id="test-id-3",
             log_path=Path("tests/test.log"),
         )
@@ -287,7 +283,6 @@ async def test_judge_move_with_exact_cards():
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            duration=0.5,
             generation_id="test-id-4",
             log_path=Path("tests/test.log"),
         )
@@ -307,7 +302,6 @@ async def test_judge_move_with_exact_cards():
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            duration=0.5,
             generation_id="test-id-5",
             log_path=Path("tests/test.log"),
         )
@@ -327,7 +321,6 @@ async def test_judge_move_with_exact_cards():
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            duration=0.5,
             generation_id="test-id-6",
             log_path=Path("tests/test.log"),
         )

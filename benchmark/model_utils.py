@@ -181,7 +181,6 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         messages=list(messages),  # Convert Messages instance to list
         temperature=0,
     )
-    duration = time.time() - start_time  # Calculate duration right after completion
 
     content = response.choices[0].message.content
     if content is None:
@@ -199,7 +198,7 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         messages=messages,
         response=content,
         cost=stats["total_cost"],
-        duration=duration,
+        duration=time.time() - start_time,
     )
 
     return ModelResponse(
@@ -208,7 +207,6 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         tokens_prompt=stats["tokens_prompt"],
         tokens_completion=stats["tokens_completion"],
         total_cost=stats["total_cost"],
-        duration=duration,
         generation_id=generation_id,
         log_path=log_path,
     )
