@@ -207,6 +207,8 @@ async def run_game(
             raise ValueError(
                 f"Loaded game has {len(game.players)} players, but {num_players} were requested"
             )
+        # Update total_rounds if continuing with a different number
+        game.total_rounds = num_rounds
     else:
         # Create player names as "Player X (model_type)"
         player_names = [
