@@ -276,8 +276,10 @@ async def test_judge_move_with_exact_cards():
         mock_call.return_value = mock_response
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert thinking == "Random selection (model failed)"
-        assert log_path is None  # Random selection has no log
+        assert "Model failed to provide valid response" in thinking
+        assert "Response must contain exactly one '|' separator" in thinking
+        assert mock_response.content in thinking  # Raw response should be included
+        assert log_path == Path("tests/test.log")  # Log path should be preserved
 
     # Test case 5: Model responds with multiple separators
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
@@ -292,8 +294,10 @@ async def test_judge_move_with_exact_cards():
         mock_call.return_value = mock_response
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert thinking == "Random selection (model failed)"
-        assert log_path is None  # Random selection has no log
+        assert "Model failed to provide valid response" in thinking
+        assert "Response must contain exactly one '|' separator" in thinking
+        assert mock_response.content in thinking  # Raw response should be included
+        assert log_path == Path("tests/test.log")  # Log path should be preserved
 
     # Test case 6: Model responds with invalid card
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
@@ -308,5 +312,7 @@ async def test_judge_move_with_exact_cards():
         mock_call.return_value = mock_response
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-        assert thinking == "Random selection (model failed)"
-        assert log_path is None  # Random selection has no log
+        assert "Model failed to provide valid response" in thinking
+        assert "Could not find matching card" in thinking
+        assert mock_response.content in thinking  # Raw response should be included
+        assert log_path == Path("tests/test.log")  # Log path should be preserved
