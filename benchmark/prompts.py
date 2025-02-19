@@ -203,6 +203,11 @@ def create_judge_messages(game: "Game", judge_idx: int) -> Messages:
     # Add current round prompt
     current_round = game.rounds[-1]
     played_cards = [move.played_card for move in current_round.moves.values()]
+
+    # Show played cards in bullet point format
+    messages.add_user(f"The played red cards are:\n{format_cards_list(played_cards)}")
+
+    # Add judge prompt
     messages.add_user(
         create_judge_prompt(
             current_round.round_number, current_round.green_card, played_cards
