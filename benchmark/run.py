@@ -57,6 +57,11 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         help="Path to save the completed game to",
     )
+    parser.add_argument(
+        "--competitive",
+        action="store_true",
+        help="Enable competitive mode where models aim to win rather than match cards accurately",
+    )
     return parser
 
 
@@ -95,7 +100,7 @@ def normalize_card_name(card: str) -> str:
 
 
 async def model_player_move(
-    game: Game, player_idx: int, model: str
+    game: Game, player_idx: int, model: str, competitive: bool = False
 ) -> tuple[str, str, Optional[Path]]:
     """Make a model-based move for the given player"""
     from benchmark.model_utils import call_model
@@ -106,7 +111,9 @@ async def model_player_move(
     green_card = round.green_card
 
     try:
-        messages = create_player_messages(game, player_idx, green_card, player.hand)
+        messages = create_player_messages(
+            game, player_idx, green_card, player.hand, competitive
+        )
         model_response = await call_model(model, messages)
         thinking, card = model_response.content.split("|", 1)
         thinking = thinking.strip()
@@ -131,7 +138,9 @@ async def model_player_move(
         return card, thinking, None
 
 
-async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
+async def model_judge_move(
+    game: Game, model: str, competitive: bool = False
+) -> tuple[str, str, Optional[Path]]:
     """Make a model-based judging decision"""
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_judge_messages
@@ -139,7 +148,7 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
     round = game.rounds[-1]
     moves = round.moves
     played_cards = [move.played_card for move in moves.values()]
-    messages = create_judge_messages(game, round.judge)
+    messages = create_judge_messages(game, round.judge, competitive)
 
     model_response = None
     try:
@@ -191,6 +200,7 @@ async def run_game(
     models: List[str],
     load_game_path: Optional[str] = None,
     save_game_path: Optional[str] = None,
+    competitive: bool = False,
 ) -> Game:
     """Run a game with the specified configuration"""
     # Create game directory and get paths
@@ -212,7 +222,7 @@ async def run_game(
         player_names = [
             f"Player {i} ({model})" for i, model in enumerate(models, start=1)
         ]
-        game = Game.new_game(player_names)
+        game = Game.new_game(player_names, competitive=competitive)
 
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
@@ -234,7 +244,7 @@ async def run_game(
                 card, thinking, log_path = random_player_move(game, player_idx)
             else:
                 card, thinking, log_path = await model_player_move(
-                    game, player_idx, model
+                    game, player_idx, model, game.competitive
                 )
 
             # Print all player output together after the model call
@@ -289,7 +299,9 @@ async def run_game(
                     )
                     break
         else:
-            winning_card, thinking, log_path = await model_judge_move(game, judge_model)
+            winning_card, thinking, log_path = await model_judge_move(
+                game, judge_model, game.competitive
+            )
             game.judge_round(winning_card, thinking)
             # Create a new decision with the log path
             if game.rounds[-1].decision:
@@ -346,6 +358,7 @@ def main():
                 models=args.models,
                 load_game_path=args.load_game,
                 save_game_path=args.save_game,
+                competitive=args.competitive,
             )
         )
 

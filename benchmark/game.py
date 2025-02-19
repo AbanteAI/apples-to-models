@@ -83,9 +83,12 @@ class Game(BaseModel):
     current_round: Optional[int] = None
     red_deck: Deck = Field(default_factory=Deck)
     green_deck: Deck = Field(default_factory=Deck)
+    competitive: bool = False  # Whether the game is in competitive mode
 
     @classmethod
-    def new_game(cls, player_names: List[str], cards_per_hand: int = 7) -> "Game":
+    def new_game(
+        cls, player_names: List[str], cards_per_hand: int = 7, competitive: bool = False
+    ) -> "Game":
         """Initialize a new game with the given players"""
         # Load card decks from benchmark directory
         cards_dir = Path(__file__).parent / "cards"
@@ -99,7 +102,11 @@ class Game(BaseModel):
             players[i] = Player(name=name, hand=hand)
 
         return cls(
-            players=players, red_deck=red_deck, green_deck=green_deck, current_round=0
+            players=players,
+            red_deck=red_deck,
+            green_deck=green_deck,
+            current_round=0,
+            competitive=competitive,
         )
 
     def start_round(self) -> Round:

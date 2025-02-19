@@ -146,6 +146,20 @@ def generate_html_report(game: Game) -> str:
             margin-bottom: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
+        .game-mode {{
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+        }}
+        .game-mode.competitive {{
+            background-color: #dc3545;
+        }}
+        .game-mode.standard {{
+            background-color: #28a745;
+        }}
         .round {{
             border: 1px solid #dee2e6;
             padding: 10px;
@@ -207,6 +221,9 @@ def generate_html_report(game: Game) -> str:
 <body>
     <div class="header">
         <h1>Game Report</h1>
+        <div class="game-mode {'competitive' if game.competitive else 'standard'}">
+            {('Competitive Mode' if game.competitive else 'Standard Mode')}
+        </div>
         <h2>Stats</h2>
         <p>Total Rounds: {total_rounds}</p>
         <h3>Standings:</h3>
