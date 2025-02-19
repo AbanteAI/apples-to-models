@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional
 
 from benchmark.game import Game
@@ -121,10 +122,20 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                         and move.played_card == round.decision.winning_card
                     ):
                         messages.add_assistant(
-                            f"{move.thinking} | {move.played_card} (Winner)"
+                            json.dumps(
+                                {
+                                    "reasoning": move.thinking,
+                                    "card": move.played_card,
+                                    "winner": True,
+                                }
+                            )
                         )
                     else:
-                        messages.add_assistant(f"{move.thinking} | {move.played_card}")
+                        messages.add_assistant(
+                            json.dumps(
+                                {"reasoning": move.thinking, "card": move.played_card}
+                            )
+                        )
             played_cards.append(move.played_card)
 
         # Show played cards to all players
@@ -154,7 +165,12 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                     else:
                         # Fallback for random moves or old game states
                         messages.add_assistant(
-                            f"{round.decision.reasoning} | {round.decision.winning_card}"
+                            json.dumps(
+                                {
+                                    "reasoning": round.decision.reasoning,
+                                    "card": round.decision.winning_card,
+                                }
+                            )
                         )
                 else:
                     # Only show the decision to other players
