@@ -169,8 +169,15 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
     """
     load_dotenv()  # Load environment variables
     api_key = os.getenv("OPEN_ROUTER_KEY", "test-key")  # Use test-key for tests
-    client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
     start_time = time.time()
+
+    if api_key == "test-key":
+        # For tests, we expect the call to be mocked
+        # This is just a fallback in case it's not
+        raise ValueError("Test key used but no mock provided")
+
+    # For real API calls
+    client = AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
 
     # Make the initial completion request
     response = await client.chat.completions.create(
