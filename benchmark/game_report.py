@@ -1,6 +1,7 @@
 import os
 import tempfile
-from typing import Dict
+from pathlib import Path
+from typing import Dict, Union
 
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np  # type: ignore
@@ -95,58 +96,49 @@ def generate_win_percentage_chart(game: Game) -> str:
 
 def calculate_model_stats(game: Game) -> dict:
     """Calculate total time and cost stats for all model calls in the game"""
-    model_stats = {}
-    total_time = 0
-    total_cost = 0
+    model_stats: dict[str, dict[str, float]] = {}
+    total_time = 0.0
+    total_cost = 0.0
+
+    def process_log_file(log_path: Union[str, Path]) -> None:
+        """Process a single log file and update the stats"""
+        nonlocal total_time, total_cost
+        path = Path(log_path) if isinstance(log_path, str) else log_path
+
+        if not path.exists():
+            return
+
+        current_model = ""
+        with open(path, "r") as f:
+            log_content = f.read()
+            for line in log_content.split("\n"):
+                if line.startswith("Model: "):
+                    current_model = line.split("Model: ")[1].strip()
+                    if current_model not in model_stats:
+                        model_stats[current_model] = {
+                            "time": 0.0,
+                            "cost": 0.0,
+                            "calls": 0.0,
+                        }
+                elif line.startswith("Duration: ") and current_model:
+                    duration = float(line.split("Duration: ")[1].split()[0])
+                    total_time += duration
+                    model_stats[current_model]["time"] += duration
+                elif line.startswith("Cost: ") and current_model:
+                    cost = float(line.split("Cost: $")[1])
+                    total_cost += cost
+                    model_stats[current_model]["cost"] += cost
+                    model_stats[current_model]["calls"] += 1
 
     for round in game.rounds:
         # Process player moves
         for move in round.moves.values():
-            if move.log_path and move.log_path.exists():
-                with open(move.log_path, "r") as f:
-                    log_content = f.read()
-                    # Extract model, duration and cost from log
-                    for line in log_content.split("\n"):
-                        if line.startswith("Model: "):
-                            model = line.split("Model: ")[1].strip()
-                            if model not in model_stats:
-                                model_stats[model] = {"time": 0, "cost": 0, "calls": 0}
-                        elif line.startswith("Duration: "):
-                            duration = float(line.split("Duration: ")[1].split()[0])
-                            total_time += duration
-                            if model in model_stats:
-                                model_stats[model]["time"] += duration
-                        elif line.startswith("Cost: "):
-                            cost = float(line.split("Cost: $")[1])
-                            total_cost += cost
-                            if model in model_stats:
-                                model_stats[model]["cost"] += cost
-                                model_stats[model]["calls"] += 1
+            if move.log_path:
+                process_log_file(move.log_path)
 
         # Process judge decision
-        if (
-            round.decision
-            and round.decision.log_path
-            and round.decision.log_path.exists()
-        ):
-            with open(round.decision.log_path, "r") as f:
-                log_content = f.read()
-                for line in log_content.split("\n"):
-                    if line.startswith("Model: "):
-                        model = line.split("Model: ")[1].strip()
-                        if model not in model_stats:
-                            model_stats[model] = {"time": 0, "cost": 0, "calls": 0}
-                    elif line.startswith("Duration: "):
-                        duration = float(line.split("Duration: ")[1].split()[0])
-                        total_time += duration
-                        if model in model_stats:
-                            model_stats[model]["time"] += duration
-                    elif line.startswith("Cost: "):
-                        cost = float(line.split("Cost: $")[1])
-                        total_cost += cost
-                        if model in model_stats:
-                            model_stats[model]["cost"] += cost
-                            model_stats[model]["calls"] += 1
+        if round.decision and round.decision.log_path:
+            process_log_file(round.decision.log_path)
 
     return {"total_time": total_time, "total_cost": total_cost, "models": model_stats}
 
