@@ -5,6 +5,8 @@ from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
+from benchmark.model_utils import ModelResponse
+
 
 class Deck(BaseModel):
     """Represents a deck of cards with draw and discard piles"""
@@ -74,6 +76,32 @@ class Player(BaseModel):
     won_rounds: List[int] = Field(default_factory=list)
 
 
+class BenchmarkStats(BaseModel):
+    """Tracks benchmark statistics including timing and model usage"""
+
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
+    total_cost: float = 0.0
+    model_stats: Dict[str, Dict[str, float]] = Field(default_factory=lambda: {})
+
+    def add_response(self, response: ModelResponse) -> None:
+        """Add a model response to the stats"""
+        self.total_cost += response.total_cost
+
+        if response.model not in self.model_stats:
+            self.model_stats[response.model] = {"cost": 0.0, "calls": 0.0}
+
+        self.model_stats[response.model]["cost"] += response.total_cost
+        self.model_stats[response.model]["calls"] += 1
+
+    @property
+    def total_time(self) -> Optional[float]:
+        """Get total time in seconds for the benchmark run"""
+        if self.start_time is None or self.end_time is None:
+            return None
+        return self.end_time - self.start_time
+
+
 class Game(BaseModel):
     """Represents the full game state"""
 
@@ -84,6 +112,7 @@ class Game(BaseModel):
     total_rounds: int  # Total number of rounds to be played
     red_deck: Deck = Field(default_factory=Deck)
     green_deck: Deck = Field(default_factory=Deck)
+    benchmark_stats: BenchmarkStats = Field(default_factory=BenchmarkStats)
 
     @classmethod
     def new_game(
@@ -124,7 +153,13 @@ class Game(BaseModel):
         self.current_round = round_num
         return new_round
 
-    def play_card(self, player_index: int, card: str, thinking: str) -> None:
+    def play_card(
+        self,
+        player_index: int,
+        card: str,
+        thinking: str,
+        model_response: Optional[ModelResponse] = None,
+    ) -> None:
         """Play a card for the given player in the current round"""
         if self.current_round is None or len(self.rounds) <= self.current_round:
             raise ValueError("No active round")
@@ -149,15 +184,26 @@ class Game(BaseModel):
         except ValueError:
             raise ValueError("No more red cards in deck")
 
+        # Update benchmark stats if response provided
+        log_path = Path("benchmark/logs/no_log.txt")  # Default path for random moves
+        if model_response:
+            self.benchmark_stats.add_response(model_response)
+            log_path = model_response.log_path or log_path
+
         # Record the move
         current_round.moves[player_index] = PlayerMove(
             played_card=card,
             thinking=thinking,
             drawn_card=new_card,
-            log_path=Path("benchmark/logs/no_log.txt"),  # Default path for random moves
+            log_path=log_path,
         )
 
-    def judge_round(self, winning_card: str, reasoning: str) -> None:
+    def judge_round(
+        self,
+        winning_card: str,
+        reasoning: str,
+        model_response: Optional[ModelResponse] = None,
+    ) -> None:
         """Judge the current round, selecting a winning card"""
         if self.current_round is None:
             raise ValueError("No active round")
@@ -187,12 +233,18 @@ class Game(BaseModel):
         if winning_player is None:
             raise ValueError(f"Card '{winning_card}' was not played this round")
 
+        # Update benchmark stats if response provided
+        log_path = Path("benchmark/logs/no_log.txt")  # Default path for random moves
+        if model_response:
+            self.benchmark_stats.add_response(model_response)
+            log_path = model_response.log_path or log_path
+
         # Record the decision
         current_round.decision = JudgeDecision(
             winning_card=winning_card,
             winning_player=winning_player,
             reasoning=reasoning,
-            log_path=Path("benchmark/logs/no_log.txt"),  # Default path for random moves
+            log_path=log_path,
         )
 
         # Update winner's score

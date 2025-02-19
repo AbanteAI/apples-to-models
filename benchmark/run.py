@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import os
 import random
+import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -215,6 +216,9 @@ async def run_game(
             f"Player {i} ({model})" for i, model in enumerate(models, start=1)
         ]
         game = Game.new_game(player_names, total_rounds=num_rounds)
+        # Start tracking benchmark time
+        start_time = time.time()
+        game.benchmark_stats.start_time = start_time
 
     try:
         # Run rounds until target is reached
@@ -330,6 +334,11 @@ async def run_game(
         final_state_path = save_game_path if save_game_path else str(state_path)
         game.save_game(final_state_path)
         print(f"\nGame state saved to: {final_state_path}")
+
+        # Record end time before generating report
+        if not game.benchmark_stats.end_time:
+            end_time = time.time()
+            game.benchmark_stats.end_time = end_time
 
         # Generate and save HTML report
         final_report_path = (

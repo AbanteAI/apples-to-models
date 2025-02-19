@@ -59,6 +59,7 @@ async def test_run_game(mock_call_model):
     # Mock model responses
     mock_response = ModelResponse(
         content="Test Card|Because it matches",
+        model="test-model",
         tokens_prompt=10,
         tokens_completion=5,
         total_cost=0.0001,
@@ -227,6 +228,7 @@ async def test_judge_move_with_exact_cards():
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="After careful consideration | Queen Elizabeth",
+            model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
@@ -243,6 +245,7 @@ async def test_judge_move_with_exact_cards():
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="She's very graceful! | Queen Elizabeth.",
+            model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
@@ -259,6 +262,7 @@ async def test_judge_move_with_exact_cards():
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="Most graceful choice | QUEEN ELIZABETH",
+            model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
@@ -275,6 +279,7 @@ async def test_judge_move_with_exact_cards():
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="Queen Elizabeth is the most graceful choice",
+            model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
@@ -293,6 +298,7 @@ async def test_judge_move_with_exact_cards():
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="First | Second | Third",
+            model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
@@ -311,6 +317,7 @@ async def test_judge_move_with_exact_cards():
     with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
         mock_response = ModelResponse(
             content="This is graceful | The Moon",
+            model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,

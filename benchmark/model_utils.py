@@ -23,6 +23,7 @@ class ModelResponse(BaseModel):
     """Response data from a model call including content and usage statistics."""
 
     content: str
+    model: str = "test-model"  # Default for tests
     tokens_prompt: int
     tokens_completion: int
     total_cost: float
@@ -33,6 +34,7 @@ class ModelResponse(BaseModel):
         """Return a human-readable string representation."""
         return (
             f"ModelResponse(content='{self.content}', "
+            f"model='{self.model}', "
             f"tokens_prompt={self.tokens_prompt}, "
             f"tokens_completion={self.tokens_completion}, "
             f"total_cost=${self.total_cost:.6f}, "
@@ -179,7 +181,6 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         messages=list(messages),  # Convert Messages instance to list
         temperature=0,
     )
-    duration = time.time() - start_time  # Calculate duration right after completion
 
     content = response.choices[0].message.content
     if content is None:
@@ -197,11 +198,12 @@ async def call_model(model: str, messages: Messages) -> ModelResponse:
         messages=messages,
         response=content,
         cost=stats["total_cost"],
-        duration=duration,
+        duration=time.time() - start_time,
     )
 
     return ModelResponse(
         content=content,
+        model=model,
         tokens_prompt=stats["tokens_prompt"],
         tokens_completion=stats["tokens_completion"],
         total_cost=stats["total_cost"],
