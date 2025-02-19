@@ -66,7 +66,7 @@ def generate_win_percentage_chart(game: Game) -> str:
                 wins.append(wins[-1] + 1)
             else:
                 wins.append(wins[-1])
-        cumulative_wins.append(wins[1:])  # Remove the initial 0
+        cumulative_wins.append(wins)  # Keep the initial 0
 
     # Convert to numpy array and calculate cumulative percentages
     cumulative_wins = np.array(cumulative_wins)
@@ -75,7 +75,9 @@ def generate_win_percentage_chart(game: Game) -> str:
     cumulative_percentages = cumulative_wins / round_totals[None, :] * 100
 
     # Create stacked area chart
-    plt.stackplot(range(len(game.rounds)), cumulative_percentages, labels=player_names)
+    plt.stackplot(
+        range(len(game.rounds) + 1), cumulative_percentages, labels=player_names
+    )
 
     plt.title("Cumulative Win Percentage")
     plt.xlabel("Round Number")
