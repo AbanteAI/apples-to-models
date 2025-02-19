@@ -10,7 +10,8 @@ import pytest
 
 from benchmark.game import Game, PlayerMove, Round
 from benchmark.model_utils import ModelResponse
-from benchmark.run import create_parser, main, model_judge_move, run_game, validate_args
+from benchmark.prompts import create_judge_messages
+from benchmark.run import create_parser, main, model_move, run_game, validate_args
 
 
 def test_argument_validation():
@@ -410,7 +411,11 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         log_path=Path("tests/test.log"),
     )
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_judge_move(game, "test-model")
+    messages = create_judge_messages(game, round.judge)
+    played_cards = [move.played_card for move in round.moves.values()]
+    card, thinking, log_path = await model_move(
+        game, "test-model", played_cards, messages, "judge"
+    )
     assert card == "Queen Elizabeth"
     assert thinking == "After careful consideration"
     assert log_path == Path("tests/test.log")
@@ -428,7 +433,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_judge_move(game, "test-model")
+    card, thinking, log_path = await model_move(
+        game, "test-model", played_cards, messages, "judge"
+    )
     assert card == "Queen Elizabeth"
     assert thinking == "She's very graceful!"
     assert log_path == Path("tests/test.log")
@@ -446,7 +453,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_judge_move(game, "test-model")
+    card, thinking, log_path = await model_move(
+        game, "test-model", played_cards, messages, "judge"
+    )
     assert card == "Queen Elizabeth"
     assert thinking == "Most graceful choice"
     assert log_path == Path("tests/test.log")
@@ -464,7 +473,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_judge_move(game, "test-model")
+    card, thinking, log_path = await model_move(
+        game, "test-model", played_cards, messages, "judge"
+    )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Model failed to provide valid response" in thinking
     assert "Invalid JSON response" in thinking
@@ -484,7 +495,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_judge_move(game, "test-model")
+    card, thinking, log_path = await model_move(
+        game, "test-model", played_cards, messages, "judge"
+    )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Model failed to provide valid response" in thinking
     assert "Response must contain 'reasoning' and 'card' fields" in thinking
@@ -504,7 +517,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_judge_move(game, "test-model")
+    card, thinking, log_path = await model_move(
+        game, "test-model", played_cards, messages, "judge"
+    )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Model failed to provide valid response" in thinking
     assert "Could not find matching card" in thinking
