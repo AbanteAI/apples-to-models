@@ -122,7 +122,6 @@ def parse_model_response(content: str) -> tuple[str, str]:
 
 
 async def model_move(
-    game: Game,
     model: str,
     valid_cards: List[str],
     messages: Messages,
@@ -243,7 +242,7 @@ async def run_game(
                         game, player_idx, round.green_card, player.hand
                     )
                     card, thinking, log_path = await model_move(
-                        game, model, player.hand, messages, "player"
+                        model, player.hand, messages, "player"
                     )
 
                 # Print all player output together after the model call
@@ -283,7 +282,7 @@ async def run_game(
                 messages = create_judge_messages(game, round.judge)
                 played_cards = [move.played_card for move in round.moves.values()]
                 winning_card, thinking, log_path = await model_move(
-                    game, judge_model, played_cards, messages, "judge"
+                    judge_model, played_cards, messages, "judge"
                 )
                 log_path = log_path if log_path else Path("benchmark/logs/no_log.txt")
 
