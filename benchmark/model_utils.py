@@ -23,11 +23,11 @@ class ModelResponse(BaseModel):
     """Response data from a model call including content and usage statistics."""
 
     content: str
-    model: str
+    model: str = "test-model"  # Default for tests
     tokens_prompt: int
     tokens_completion: int
     total_cost: float
-    duration: float
+    duration: float = 0.5  # Default for tests
     generation_id: str
     log_path: Optional[Path] = None
 
