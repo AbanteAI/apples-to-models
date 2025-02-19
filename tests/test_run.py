@@ -470,7 +470,7 @@ async def test_judge_move_with_exact_cards():
     mock_client = AsyncMock()
     mock_client.chat = mock_chat
 
-    async def mock_get_stats(*args, **kwargs):
+    async def mock_get_stats_case1(*args, **kwargs):
         return {
             "data": {
                 "id": "test-id",
@@ -484,7 +484,7 @@ async def test_judge_move_with_exact_cards():
 
     with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
         "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
-    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats):
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats_case1):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "After careful consideration"
@@ -507,7 +507,7 @@ async def test_judge_move_with_exact_cards():
     mock_client = AsyncMock()
     mock_client.chat = mock_chat
 
-    async def mock_get_stats(*args, **kwargs):
+    async def mock_get_stats_case2(*args, **kwargs):
         return {
             "data": {
                 "id": "test-id-2",
@@ -521,7 +521,7 @@ async def test_judge_move_with_exact_cards():
 
     with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
         "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
-    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats):
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats_case2):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
