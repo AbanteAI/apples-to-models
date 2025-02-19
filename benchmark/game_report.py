@@ -93,12 +93,12 @@ def generate_win_percentage_chart(game: Game) -> str:
     return chart_path
 
 
-def calculate_model_stats(game: Game) -> dict:
-    """Get model usage statistics from the game state"""
+def calculate_benchmark_stats(game: Game) -> dict:
+    """Get benchmark statistics from the game state"""
     return {
-        "total_time": game.model_stats.total_time,
-        "total_cost": game.model_stats.total_cost,
-        "models": game.model_stats.model_stats,
+        "total_time": game.benchmark_stats.total_time,
+        "total_cost": game.benchmark_stats.total_cost,
+        "models": game.benchmark_stats.model_stats,
     }
 
 
@@ -113,8 +113,8 @@ def generate_html_report(game: Game) -> str:
     }
     standings = sorted(player_stats.items(), key=lambda x: x[1]["wins"], reverse=True)
 
-    # Calculate model stats
-    model_stats = calculate_model_stats(game)
+    # Calculate benchmark stats
+    benchmark_stats = calculate_benchmark_stats(game)
 
     html = f"""
 <!DOCTYPE html>
@@ -129,27 +129,27 @@ def generate_html_report(game: Game) -> str:
             padding: 10px;
             line-height: 1.4;
         }}
-        .model-stats {{
+        .benchmark-stats {{
             background-color: #e7f3fe;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
-        .model-stats table {{
+        .benchmark-stats table {{
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }}
-        .model-stats th, .model-stats td {{
+        .benchmark-stats th, .benchmark-stats td {{
             padding: 8px;
             text-align: left;
             border-bottom: 1px solid #b3d7ff;
         }}
-        .model-stats th {{
+        .benchmark-stats th {{
             background-color: #d0e7ff;
         }}
-        .model-stats tr:last-child td {{
+        .benchmark-stats tr:last-child td {{
             border-bottom: none;
         }}
         .totals {{
@@ -247,11 +247,11 @@ def generate_html_report(game: Game) -> str:
 <body>
     <div class="header">
         <h1>Game Report</h1>
-        <div class="model-stats">
-            <h2>Model Usage Statistics</h2>
+        <div class="benchmark-stats">
+            <h2>Benchmark Statistics</h2>
             <div class="totals">
-                <p>Total Time: {f"{model_stats['total_time']:.2f} seconds" if model_stats['total_time'] is not None else "N/A"}</p>
-                <p>Total Cost: ${model_stats['total_cost']:.4f}</p>
+                <p>Total Time: {f"{benchmark_stats['total_time']:.2f} seconds" if benchmark_stats['total_time'] is not None else "N/A"}</p>
+                <p>Total Cost: ${benchmark_stats['total_cost']:.4f}</p>
             </div>
             <table>
                 <tr>
@@ -259,7 +259,7 @@ def generate_html_report(game: Game) -> str:
                     <th>Calls</th>
                     <th>Cost ($)</th>
                 </tr>
-                {''.join(f"<tr><td>{model}</td><td>{stats['calls']}</td><td>${stats['cost']:.4f}</td></tr>" for model, stats in model_stats['models'].items())}
+                {''.join(f"<tr><td>{model}</td><td>{stats['calls']}</td><td>${stats['cost']:.4f}</td></tr>" for model, stats in benchmark_stats['models'].items())}
             </table>
         </div>
         <h2>Game Stats</h2>

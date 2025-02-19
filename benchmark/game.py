@@ -76,8 +76,8 @@ class Player(BaseModel):
     won_rounds: List[int] = Field(default_factory=list)
 
 
-class ModelStats(BaseModel):
-    """Tracks statistics for model usage"""
+class GameStats(BaseModel):
+    """Tracks game-wide statistics including timing and model usage"""
 
     start_time: Optional[float] = None
     end_time: Optional[float] = None
@@ -112,7 +112,7 @@ class Game(BaseModel):
     total_rounds: int  # Total number of rounds to be played
     red_deck: Deck = Field(default_factory=Deck)
     green_deck: Deck = Field(default_factory=Deck)
-    model_stats: ModelStats = Field(default_factory=ModelStats)
+    game_stats: GameStats = Field(default_factory=GameStats)
 
     @classmethod
     def new_game(

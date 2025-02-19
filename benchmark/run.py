@@ -216,8 +216,9 @@ async def run_game(
             f"Player {i} ({model})" for i, model in enumerate(models, start=1)
         ]
         game = Game.new_game(player_names, total_rounds=num_rounds)
-        # Start tracking time for new games
-        game.model_stats.start_time = time.time()
+        # Start tracking benchmark time
+        start_time = time.time()
+        game.benchmark_stats.start_time = start_time
 
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:
@@ -333,10 +334,9 @@ async def run_game(
     print(f"Game report saved to: {final_report_path}")
 
     # Record end time before generating report
-    if not game.model_stats.end_time:
-        import time
-
-        game.model_stats.end_time = time.time()
+    if not game.benchmark_stats.end_time:
+        end_time = time.time()
+        game.benchmark_stats.end_time = end_time
 
     # Open the report in the default web browser
     webbrowser.open(f"file://{os.path.abspath(final_report_path)}")
