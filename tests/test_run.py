@@ -604,39 +604,83 @@ async def test_judge_move_with_exact_cards():
         assert log_path == Path("tests/test.log")  # Log path should be preserved
 
     # Test case 5: Model responds with JSON missing required fields
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"thinking": "Most graceful choice"}',  # Missing "card" field
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-5",
-            log_path=Path("tests/test.log"),
+    mock_completion = AsyncMock()
+    mock_completion.choices = [
+        AsyncMock(
+            message=AsyncMock(
+                content='{"thinking": "Most graceful choice"}'  # Missing "card" field
+            )
         )
-        mock_call.return_value = mock_response
+    ]
+    mock_completion.id = "test-id-5"
+
+    mock_chat = AsyncMock()
+    mock_chat.completions.create = AsyncMock(return_value=mock_completion)
+
+    mock_client = AsyncMock()
+    mock_client.chat = mock_chat
+
+    async def mock_get_stats_case5(*args, **kwargs):
+        return {
+            "data": {
+                "id": "test-id-5",
+                "tokens_prompt": 10,
+                "tokens_completion": 5,
+                "total_cost": 0.0001,
+                "model": "test-model",
+                "log_path": Path("tests/test.log"),
+            }
+        }
+
+    with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
+        "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats_case5):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert "Random selection (model failed:" in thinking
         assert "Response must contain 'reasoning' and 'card' fields" in thinking
-        assert mock_response.content in thinking  # Raw response should be included
+        assert (
+            '{"thinking": "Most graceful choice"}' in thinking
+        )  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
 
     # Test case 6: Model responds with invalid card in JSON
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "This is graceful", "card": "The Moon"}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-6",
-            log_path=Path("tests/test.log"),
+    mock_completion = AsyncMock()
+    mock_completion.choices = [
+        AsyncMock(
+            message=AsyncMock(
+                content='{"reasoning": "This is graceful", "card": "The Moon"}'
+            )
         )
-        mock_call.return_value = mock_response
+    ]
+    mock_completion.id = "test-id-6"
+
+    mock_chat = AsyncMock()
+    mock_chat.completions.create = AsyncMock(return_value=mock_completion)
+
+    mock_client = AsyncMock()
+    mock_client.chat = mock_chat
+
+    async def mock_get_stats_case6(*args, **kwargs):
+        return {
+            "data": {
+                "id": "test-id-6",
+                "tokens_prompt": 10,
+                "tokens_completion": 5,
+                "total_cost": 0.0001,
+                "model": "test-model",
+                "log_path": Path("tests/test.log"),
+            }
+        }
+
+    with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
+        "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats_case6):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
         assert "Random selection (model failed:" in thinking
         assert "which is not in valid cards" in thinking
-        assert mock_response.content in thinking  # Raw response should be included
+        assert (
+            '{"reasoning": "This is graceful", "card": "The Moon"}' in thinking
+        )  # Raw response should be included
         assert log_path == Path("tests/test.log")  # Log path should be preserved
