@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import os
 import random
 import time
@@ -95,10 +96,42 @@ def normalize_card_name(card: str) -> str:
     return "".join(c.lower() for c in card if c.isalpha())
 
 
+def parse_model_response(content: str) -> tuple[str, str]:
+    """Parse a model response into thinking and card components.
+
+    Args:
+        content: The raw response content from the model
+
+    Returns:
+        A tuple of (thinking, card)
+
+    Raises:
+        ValueError: If the response cannot be parsed as valid JSON with the required fields
+    """
+    # Strip markdown code block markers if present
+    if content.startswith("```"):
+        content = "\n".join(content.split("\n")[1:-1])
+    # Clean up the content by removing any problematic whitespace
+    content = content.strip()
+    # Parse with more lenient settings
+    try:
+        response_data = json.loads(content, strict=False)
+        if not isinstance(response_data, dict):
+            raise ValueError("Response must be a JSON object")
+        if "reasoning" not in response_data or "card" not in response_data:
+            raise ValueError("Response must contain 'reasoning' and 'card' fields")
+        thinking = response_data["reasoning"].strip()
+        card = response_data["card"].strip()
+        return thinking, card
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON response: {e}")
+
+
 async def model_player_move(
     game: Game, player_idx: int, model: str
 ) -> tuple[str, str, Optional[Path]]:
     """Make a model-based move for the given player"""
+
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_player_messages
 
@@ -110,8 +143,12 @@ async def model_player_move(
     try:
         messages = create_player_messages(game, player_idx, green_card, player.hand)
         model_response = await call_model(model, messages)
-        thinking, card = model_response.content.split("|", 1)
-        thinking = thinking.strip()
+
+        # Parse JSON response
+        try:
+            thinking, card = parse_model_response(model_response.content)
+        except ValueError as e:
+            raise ValueError(str(e))
 
         # Normalize the chosen card and player's hand
         normalized_card = normalize_card_name(card)
@@ -147,6 +184,7 @@ async def model_player_move(
 
 async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
     """Make a model-based judging decision"""
+
     from benchmark.model_utils import call_model
     from benchmark.prompts import create_judge_messages
 
@@ -158,15 +196,12 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
     model_response = None
     try:
         model_response = await call_model(model, messages)
-        # Require exactly one separator
-        if model_response.content.count("|") != 1:
-            raise ValueError(
-                f"Response must contain exactly one '|' separator: {model_response.content}"
-            )
 
-        thinking, card = model_response.content.split("|", 1)
-        thinking = thinking.strip()
-        card = card.strip()
+        # Parse JSON response
+        try:
+            thinking, card = parse_model_response(model_response.content)
+        except ValueError as e:
+            raise ValueError(str(e))
 
         # Normalize card name and find match
         normalized_card = normalize_card_name(card)
