@@ -72,6 +72,7 @@ async def test_run_game(mock_call_model):
     game = await game_coro
     assert len(game.rounds) == 3
     assert len(game.players) == 2
+    assert game.total_rounds == 3
     assert all(len(player.won_rounds) > 0 for player in game.players.values())
     assert mock_call_model.call_count == 0  # No model calls for random players
 
@@ -81,6 +82,7 @@ async def test_run_game(mock_call_model):
     game = await game_coro
     assert len(game.rounds) == 2
     assert len(game.players) == 2
+    assert game.total_rounds == 2
     # Should have model calls for the gpt-4 player's moves and when they judge
     assert mock_call_model.call_count > 0
 
@@ -97,6 +99,7 @@ async def test_run_game(mock_call_model):
             saved_data = json.load(saved)
             assert saved_data["version"] == "1.0"
             assert len(saved_data["rounds"]) == 2
+            assert saved_data["total_rounds"] == 2
 
         # Test loading and continuing
         continued_game_coro = run_game(
@@ -107,6 +110,7 @@ async def test_run_game(mock_call_model):
         )
         continued_game = await continued_game_coro
         assert len(continued_game.rounds) == 4
+        assert continued_game.total_rounds == 4
 
         # Clean up
         Path(f.name).unlink()
@@ -195,8 +199,12 @@ def test_normalize_card_name():
 async def test_judge_move_with_exact_cards():
     """Test the judge's move with the exact cards from issue #24"""
     # Create a mock game state
-    game = Game.new_game(["Player 1", "Player 2", "Player 3"])
-    round = Round(round_number=0, green_card="Graceful", judge=0)
+    game = Game.new_game(["Player 1", "Player 2", "Player 3"], total_rounds=6)
+
+    # Start a round and modify it with our test data
+    game.start_round()
+    game.rounds[0] = Round(round_number=0, green_card="Graceful", judge=0)
+    round = game.rounds[0]
 
     # Add the exact moves from the issue
     round.moves = {
