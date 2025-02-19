@@ -29,12 +29,14 @@ def format_scores(
     return "\n".join(scores)
 
 
-def create_system_message(total_players: int, player_number: int) -> str:
-    """Create the system message with player count information."""
+def create_system_message(
+    total_players: int, player_number: int, total_rounds: int
+) -> str:
+    """Create the system message with player count and round information."""
     return (
         "You are playing Apples to Apples, a competitive word association game. "
         f"There are {total_players} players in the game, and you are Player {player_number}. "
-        "The game consists of a fixed number of rounds, and the player with the most wins at the end is the winner. "
+        f"The game consists of {total_rounds} rounds, and the player with the most wins at the end is the winner. "
         "In each round, there is a green card (an adjective) and players play red cards (nouns). "
         "Your goal is to win by playing cards that the judge will select, not necessarily the ones "
         "that match the green card most literally. Think strategically about what will appeal to the judge!"
@@ -89,7 +91,9 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
         Messages object containing the system and historical messages
     """
     messages = Messages()
-    messages.add_system(create_system_message(len(game.players), player_idx + 1))
+    messages.add_system(
+        create_system_message(len(game.players), player_idx + 1, game.total_rounds)
+    )
 
     # Add game history for all rounds
     for round in game.rounds:

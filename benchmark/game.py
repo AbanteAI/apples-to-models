@@ -81,11 +81,14 @@ class Game(BaseModel):
     players: Dict[int, Player]  # player_index -> Player
     rounds: List[Round] = Field(default_factory=list)
     current_round: Optional[int] = None
+    total_rounds: int  # Total number of rounds to be played
     red_deck: Deck = Field(default_factory=Deck)
     green_deck: Deck = Field(default_factory=Deck)
 
     @classmethod
-    def new_game(cls, player_names: List[str], cards_per_hand: int = 7) -> "Game":
+    def new_game(
+        cls, player_names: List[str], total_rounds: int, cards_per_hand: int = 7
+    ) -> "Game":
         """Initialize a new game with the given players"""
         # Load card decks from benchmark directory
         cards_dir = Path(__file__).parent / "cards"
@@ -99,7 +102,11 @@ class Game(BaseModel):
             players[i] = Player(name=name, hand=hand)
 
         return cls(
-            players=players, red_deck=red_deck, green_deck=green_deck, current_round=0
+            players=players,
+            red_deck=red_deck,
+            green_deck=green_deck,
+            current_round=0,
+            total_rounds=total_rounds,
         )
 
     def start_round(self) -> Round:

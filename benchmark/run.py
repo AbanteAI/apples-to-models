@@ -212,7 +212,7 @@ async def run_game(
         player_names = [
             f"Player {i} ({model})" for i, model in enumerate(models, start=1)
         ]
-        game = Game.new_game(player_names)
+        game = Game.new_game(player_names, total_rounds=num_rounds)
 
     # Run rounds until target is reached
     while len(game.rounds) < num_rounds:

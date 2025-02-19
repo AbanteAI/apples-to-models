@@ -31,7 +31,7 @@ def assert_content_contains(content: str, substring: str) -> None:
 
 def test_create_player_messages_basic():
     """Test basic player message creation without game history"""
-    game = Game.new_game(["Alice", "Bob", "Charlie"])
+    game = Game.new_game(["Alice", "Bob", "Charlie"], total_rounds=6)
     game.start_round()
 
     messages = create_player_messages(
@@ -52,7 +52,7 @@ def test_create_player_messages_basic():
 
 def test_create_player_messages_with_history():
     """Test player message creation with game history"""
-    game = Game.new_game(["Alice", "Bob"])
+    game = Game.new_game(["Alice", "Bob"], total_rounds=4)
 
     # Set up a completed round
     round1 = Round(round_number=0, green_card="Fast", judge=1)
@@ -91,7 +91,7 @@ def test_create_player_messages_with_history():
 
 def test_create_judge_messages_basic():
     """Test basic judge message creation without game history"""
-    game = Game.new_game(["Alice", "Bob", "Charlie"])
+    game = Game.new_game(["Alice", "Bob", "Charlie"], total_rounds=6)
     round1 = game.start_round()
 
     # Players make moves
@@ -128,7 +128,7 @@ def test_create_judge_messages_basic():
 
 def test_create_judge_messages_with_history():
     """Test judge message creation with game history"""
-    game = Game.new_game(["Alice", "Bob", "Charlie"])
+    game = Game.new_game(["Alice", "Bob", "Charlie"], total_rounds=6)
 
     # Set up a completed round
     round1 = Round(round_number=0, green_card="Scary", judge=0)
@@ -192,7 +192,7 @@ def test_create_judge_messages_with_history():
 
 def test_player_perspective_in_history():
     """Test that players only see their own thinking in history"""
-    game = Game.new_game(["Alice", "Bob", "Charlie"])
+    game = Game.new_game(["Alice", "Bob", "Charlie"], total_rounds=6)
 
     # Complete first round
     round1 = Round(round_number=0, green_card="Loud", judge=2)
@@ -253,7 +253,7 @@ def test_player_perspective_in_history():
 
 def test_game_history_visibility():
     """Test that game history shows the right information to each player"""
-    game = Game.new_game(["Alice", "Bob", "Charlie"])
+    game = Game.new_game(["Alice", "Bob", "Charlie"], total_rounds=6)
 
     # Set up a completed round
     round1 = Round(round_number=0, green_card="Cold", judge=0)
