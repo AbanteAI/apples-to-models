@@ -81,7 +81,11 @@ def test_create_player_messages_with_history():
     assert_content_contains(history, "Fast")
     assert_content_contains(history, "Cheetah")
     assert_content_contains(history, "Cheetahs are the fastest land animal")
-    assert_content_contains(history, "Cheetahs are indeed the fastest")
+    # Should not see judge's reasoning
+    assert "Cheetahs are indeed the fastest" not in history
+    assert_content_contains(
+        history, "Player 2 (judge) selected 'Cheetah' as the winner."
+    )
 
     # Check current round prompt
     last_content = get_message_content(messages.messages[-1])
@@ -249,9 +253,11 @@ def test_player_perspective_in_history():
     assert_content_contains(
         player1_history, "Explosions are very loud"
     )  # Their thinking
+    # Should not see judge's reasoning
+    assert "Thunder is naturally loud" not in player1_history
     assert_content_contains(
-        player1_history, "Thunder is naturally loud"
-    )  # Judge's reasoning
+        player1_history, "Player 3 (judge) selected 'Thunder' as the winner."
+    )
     assert "Thunder is deafening" not in player1_history  # Other player's thinking
 
 
