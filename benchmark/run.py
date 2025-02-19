@@ -144,40 +144,45 @@ async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[P
     model_response = None
     try:
         model_response = await call_model(model, messages)
-        try:
-            # Require exactly one separator
-            if model_response.content.count("|") != 1:
-                raise ValueError(
-                    f"Response must contain exactly one '|' separator: {model_response.content}"
-                )
-
-            thinking, card = model_response.content.split("|", 1)
-            thinking = thinking.strip()
-            card = card.strip()
-
-            # Normalize card name and find match
-            normalized_card = normalize_card_name(card)
-            for played_card in played_cards:
-                if normalize_card_name(played_card) == normalized_card:
-                    card = played_card
-                    break
-            else:
-                raise ValueError(
-                    f"Could not find matching card '{card}' among played cards: {played_cards}"
-                )
-
-            return card, thinking, model_response.log_path
-        except Exception as e:
-            # Print raw response only when there's an error parsing it
-            print(
-                f"\nError parsing judge response. Raw response was: {model_response.content}"
+        # Require exactly one separator
+        if model_response.content.count("|") != 1:
+            raise ValueError(
+                f"Response must contain exactly one '|' separator: {model_response.content}"
             )
-            raise e
+
+        thinking, card = model_response.content.split("|", 1)
+        thinking = thinking.strip()
+        card = card.strip()
+
+        # Normalize card name and find match
+        normalized_card = normalize_card_name(card)
+        for played_card in played_cards:
+            if normalize_card_name(played_card) == normalized_card:
+                card = played_card
+                break
+        else:
+            raise ValueError(
+                f"Could not find matching card '{card}' among played cards: {played_cards}"
+            )
+
+        return card, thinking, model_response.log_path
+
     except Exception as e:
-        # Fallback to random selection if model fails
-        print(f"Model error for judge, falling back to random: {str(e)}")
-        winning_move = random.choice(list(moves.values()))
-        return winning_move.played_card, "Random selection (model failed)", None
+        # If we have a model response but failed to parse it, include the raw response
+        if model_response:
+            error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
+            print(f"\nError parsing judge response: {error_msg}")
+            winning_move = random.choice(list(moves.values()))
+            return winning_move.played_card, error_msg, model_response.log_path
+        else:
+            # Model call itself failed
+            print(f"Model error for judge, falling back to random: {str(e)}")
+            winning_move = random.choice(list(moves.values()))
+            return (
+                winning_move.played_card,
+                f"Random selection (model failed: {str(e)})",
+                None,
+            )
 
 
 async def run_game(
