@@ -92,7 +92,14 @@ async def test_run_game():
 
     async def mock_get_stats(*args, **kwargs):
         return {
-            "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
+            "data": {
+                "id": "test-id",
+                "tokens_prompt": 10,
+                "tokens_completion": 5,
+                "total_cost": 0.0001,
+                "model": "test-model",
+                "log_path": Path("tests/test.log"),
+            }
         }
 
     with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
@@ -362,11 +369,16 @@ async def test_model_log_preservation():
         mock_client.chat = mock_chat
 
         async def mock_get_stats(*args, **kwargs):
+            nonlocal response_index
+            response = responses[response_index]
             return {
                 "data": {
-                    "tokens_prompt": 10,
-                    "tokens_completion": 5,
-                    "total_cost": 0.0001,
+                    "id": response.generation_id,
+                    "tokens_prompt": response.tokens_prompt,
+                    "tokens_completion": response.tokens_completion,
+                    "total_cost": response.total_cost,
+                    "model": response.model,
+                    "log_path": response.log_path,
                 }
             }
 
@@ -458,7 +470,14 @@ async def test_judge_move_with_exact_cards():
 
     async def mock_get_stats(*args, **kwargs):
         return {
-            "data": {"tokens_prompt": 10, "tokens_completion": 5, "total_cost": 0.0001}
+            "data": {
+                "id": "test-id",
+                "tokens_prompt": 10,
+                "tokens_completion": 5,
+                "total_cost": 0.0001,
+                "model": "test-model",
+                "log_path": Path("tests/test.log"),
+            }
         }
 
     with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
