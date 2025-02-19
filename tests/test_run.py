@@ -354,12 +354,13 @@ async def test_model_log_preservation():
         async def create_completion(**kwargs):
             nonlocal response_index
             response = responses[response_index]
-            response_index = (response_index + 1) % len(responses)
             mock_completion = AsyncMock()
             mock_completion.choices = [
                 AsyncMock(message=AsyncMock(content=response.content))
             ]
             mock_completion.id = response.generation_id
+            # Increment index after creating completion
+            response_index = (response_index + 1) % len(responses)
             return mock_completion
 
         mock_chat = AsyncMock()
@@ -369,8 +370,9 @@ async def test_model_log_preservation():
         mock_client.chat = mock_chat
 
         async def mock_get_stats(*args, **kwargs):
-            nonlocal response_index
-            response = responses[response_index]
+            # Use the previous index since we want stats for the last completion
+            prev_index = (response_index - 1) % len(responses)
+            response = responses[prev_index]
             return {
                 "data": {
                     "id": response.generation_id,
@@ -489,17 +491,37 @@ async def test_judge_move_with_exact_cards():
         assert log_path == Path("tests/test.log")
 
     # Test case 2: Model responds with proper JSON format and punctuation
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
-        mock_response = ModelResponse(
-            content='{"reasoning": "She\'s very graceful!", "card": "Queen Elizabeth."}',
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-2",
-            log_path=Path("tests/test.log"),
+    mock_completion = AsyncMock()
+    mock_completion.choices = [
+        AsyncMock(
+            message=AsyncMock(
+                content='{"reasoning": "She\'s very graceful!", "card": "Queen Elizabeth."}'
+            )
         )
-        mock_call.return_value = mock_response
+    ]
+    mock_completion.id = "test-id-2"
+
+    mock_chat = AsyncMock()
+    mock_chat.completions.create = AsyncMock(return_value=mock_completion)
+
+    mock_client = AsyncMock()
+    mock_client.chat = mock_chat
+
+    async def mock_get_stats(*args, **kwargs):
+        return {
+            "data": {
+                "id": "test-id-2",
+                "tokens_prompt": 10,
+                "tokens_completion": 5,
+                "total_cost": 0.0001,
+                "model": "test-model",
+                "log_path": Path("tests/test.log"),
+            }
+        }
+
+    with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
+        "benchmark.model_utils.AsyncOpenAI", return_value=mock_client
+    ), patch("benchmark.model_utils.get_generation_stats", new=mock_get_stats):
         card, thinking, log_path = await model_judge_move(game, "test-model")
         assert card == "Queen Elizabeth"
         assert thinking == "She's very graceful!"
