@@ -56,7 +56,8 @@ def test_argument_validation():
 
 @pytest.mark.asyncio
 @patch("benchmark.model_utils.call_model", new_callable=AsyncMock)
-async def test_run_game(mock_call_model):
+@patch("benchmark.model_utils.os.getenv", return_value="test-key")
+async def test_run_game(mock_getenv, mock_call_model):
     # Mock model responses
     mock_response = ModelResponse(
         content="Test Card|Because it matches",
@@ -324,7 +325,9 @@ async def test_model_log_preservation():
             return response
 
         # Run a game with the mock
-        with patch("benchmark.model_utils.call_model", new=mock_call_model):
+        with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
+            "benchmark.model_utils.call_model", new=mock_call_model
+        ):
             game = await run_game(
                 num_rounds=2,
                 num_players=2,
@@ -392,7 +395,9 @@ async def test_judge_move_with_exact_cards():
     game.rounds = [round]
 
     # Test case 1: Model responds with proper JSON format
-    with patch("benchmark.model_utils.call_model", new_callable=AsyncMock) as mock_call:
+    with patch("benchmark.model_utils.os.getenv", return_value="test-key"), patch(
+        "benchmark.model_utils.call_model", new_callable=AsyncMock
+    ) as mock_call:
         mock_response = ModelResponse(
             content='{"reasoning": "After careful consideration", "card": "Queen Elizabeth"}',
             model="test-model",
