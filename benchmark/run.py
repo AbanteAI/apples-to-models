@@ -106,6 +106,7 @@ async def model_player_move(
     round = game.rounds[-1]
     green_card = round.green_card
 
+    model_response = None
     try:
         messages = create_player_messages(game, player_idx, green_card, player.hand)
         model_response = await call_model(model, messages)
@@ -124,12 +125,24 @@ async def model_player_move(
 
         return card, thinking, model_response.log_path
     except Exception as e:
-        # Fallback to random selection if model fails
-        print(
-            f"Model error for player {player_idx + 1}, falling back to random: {str(e)}"
-        )
-        card, thinking, _ = random_player_move(game, player_idx)
-        return card, thinking, None
+        # Fallback to random selection if model fails, but preserve the log if we have it
+        error_msg = str(e)
+        if model_response:
+            error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
+            print(f"\nError parsing player response: {error_msg}")
+            card, thinking, _ = random_player_move(game, player_idx)
+            return (
+                card,
+                f"Random selection (model failed: {str(e)})",
+                model_response.log_path,
+            )
+        else:
+            # Model call itself failed
+            print(
+                f"Model error for player {player_idx + 1}, falling back to random: {str(e)}"
+            )
+            card, thinking, _ = random_player_move(game, player_idx)
+            return card, thinking, None
 
 
 async def model_judge_move(game: Game, model: str) -> tuple[str, str, Optional[Path]]:
