@@ -176,7 +176,9 @@ def test_create_judge_messages_with_history():
     assert_content_contains(history, "Scary")
     assert_content_contains(history, "Ghost")
     assert_content_contains(history, "Spider")
-    assert_content_contains(history, "Ghosts are the scariest")
+    # As the judge for round 2, should not see previous judge's reasoning
+    assert "Ghosts are the scariest" not in history
+    assert_content_contains(history, "Player 1 (judge) selected 'Ghost' as the winner.")
 
     # Check played cards message
     cards_message = get_message_content(messages.messages[-2])
@@ -229,9 +231,11 @@ def test_player_perspective_in_history():
     # Player 0 should see their own move and the judge's decision
     assert_content_contains(player0_history, "Thunder")  # Their played card
     assert_content_contains(player0_history, "Thunder is deafening")  # Their thinking
+    # Should not see judge's reasoning as a non-judge
+    assert "Thunder is naturally loud" not in player0_history
     assert_content_contains(
-        player0_history, "Thunder is naturally loud"
-    )  # Judge's reasoning
+        player0_history, "Player 3 (judge) selected 'Thunder' as the winner."
+    )
     assert "Explosions are very loud" not in player0_history  # Other player's thinking
 
     # Get messages for player 1
@@ -330,6 +334,11 @@ def test_game_history_visibility():
     # Should see current round cards anonymously
     assert_content_contains(player2_view, "Fire")
     assert_content_contains(player2_view, "Desert")
+    # Should not see previous judge's reasoning
+    assert "Ice is literally frozen and therefore the coldest" not in player2_view
+    assert_content_contains(
+        player2_view, "Player 1 (judge) selected 'Ice' as the winner."
+    )
 
     # Test Player 3's view (regular player)
     messages = create_player_messages(game, 2, "Hot", ["Desert"])
