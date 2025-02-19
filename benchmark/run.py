@@ -12,6 +12,7 @@ from typing import List, Optional
 from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game, JudgeDecision
+from benchmark.model_utils import Messages, call_model
 from benchmark.game_report import save_html_report
 
 # Create games directory if it doesn't exist
@@ -129,7 +130,7 @@ def parse_model_response(content: str) -> tuple[str, str]:
 
 async def handle_model_interaction(
     model: str,
-    messages: "Messages",
+    messages: Messages
     valid_cards: list[str],
     role: str,
     fallback_fn: callable,
@@ -148,7 +149,6 @@ async def handle_model_interaction(
     Returns:
         A tuple of (chosen_card, thinking, log_path)
     """
-    from benchmark.model_utils import call_model
 
     model_response = None
     try:
