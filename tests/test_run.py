@@ -288,8 +288,8 @@ async def test_model_log_preservation():
             report_path = os.path.splitext(state_path)[0] + ".html"
             with open(report_path) as f:
                 report_content = f.read()
-                assert str(valid_response.log_path) in report_content
-                assert str(invalid_response.log_path) in report_content
+                assert str(player_valid_response.log_path) in report_content
+                assert str(player_invalid_response.log_path) in report_content
                 assert (
                     "no_log.txt" not in report_content
                 )  # Should not use no_log.txt for model failures
