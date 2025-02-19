@@ -202,23 +202,30 @@ def test_player_perspective_in_history():
 
     # Complete first round
     round1 = Round(round_number=0, green_card="Loud", judge=2)
+    # Player 0's move with raw response
+    raw_response_0 = '{"reasoning": "Thunder is deafening", "card": "Thunder"}'
     round1.moves[0] = PlayerMove(
         played_card="Thunder",
         thinking="Thunder is deafening",
         drawn_card="Lightning",
         log_path=Path("tests/test.log"),
+        raw_response=raw_response_0,
     )
+    # Player 1's move without raw response (testing fallback)
     round1.moves[1] = PlayerMove(
         played_card="Explosion",
         thinking="Explosions are very loud",
         drawn_card="Bomb",
         log_path=Path("tests/test.log"),
     )
+    # Judge's decision with raw response
+    raw_response_judge = '{"reasoning": "Thunder is naturally loud", "card": "Thunder"}'
     round1.decision = JudgeDecision(
         winning_card="Thunder",
         winning_player=0,
         reasoning="Thunder is naturally loud",
         log_path=Path("tests/test.log"),
+        raw_response=raw_response_judge,
     )
     game.rounds.append(round1)
 
@@ -232,15 +239,15 @@ def test_player_perspective_in_history():
         get_message_content(msg) for msg in player0_messages.messages
     )
 
-    # Player 0 should see their own move and the judge's decision
-    assert_content_contains(player0_history, "Thunder")  # Their played card
-    assert_content_contains(player0_history, "Thunder is deafening")  # Their thinking
-    # Should not see judge's reasoning as a non-judge
-    assert "Thunder is naturally loud" not in player0_history
+    # Player 0 should see their own raw response and the judge's decision
+    assert_content_contains(player0_history, raw_response_0)  # Their raw response
+    # Should not see judge's raw response as a non-judge
+    assert raw_response_judge not in player0_history
     assert_content_contains(
         player0_history, "Player 3 (judge) selected 'Thunder' as the winner."
     )
-    assert "Explosions are very loud" not in player0_history  # Other player's thinking
+    # Should not see other player's thinking (fallback format)
+    assert "Explosions are very loud" not in player0_history
 
     # Get messages for player 1
     player1_messages = create_player_messages(game, 1, "Bright", ["Moon", "Fire"])
@@ -248,17 +255,62 @@ def test_player_perspective_in_history():
         get_message_content(msg) for msg in player1_messages.messages
     )
 
-    # Player 1 should see their own move and the judge's decision
+    # Player 1 should see their own move (fallback format) and the judge's decision
     assert_content_contains(player1_history, "Explosion")  # Their played card
     assert_content_contains(
         player1_history, "Explosions are very loud"
-    )  # Their thinking
-    # Should not see judge's reasoning
-    assert "Thunder is naturally loud" not in player1_history
+    )  # Their thinking (fallback)
+    # Should not see judge's raw response
+    assert raw_response_judge not in player1_history
     assert_content_contains(
         player1_history, "Player 3 (judge) selected 'Thunder' as the winner."
     )
-    assert "Thunder is deafening" not in player1_history  # Other player's thinking
+    # Should not see other player's raw response
+    assert raw_response_0 not in player1_history
+
+
+def test_raw_response_in_judge_messages():
+    """Test that raw responses are properly handled in judge messages"""
+    game = Game.new_game(["Alice", "Bob", "Charlie"], total_rounds=6)
+
+    # Set up a round with raw responses
+    round1 = Round(round_number=0, green_card="Creative", judge=0)
+    raw_response_1 = '{"reasoning": "Art is the essence of creativity", "card": "Art"}'
+    raw_response_2 = '{"reasoning": "Dreams are pure creativity", "card": "Dreams"}'
+    judge_raw_response = '{"reasoning": "Art is the most creative", "card": "Art"}'
+
+    round1.moves[1] = PlayerMove(
+        played_card="Art",
+        thinking="Art is creative",
+        drawn_card="Paint",
+        log_path=Path("tests/test.log"),
+        raw_response=raw_response_1,
+    )
+    round1.moves[2] = PlayerMove(
+        played_card="Dreams",
+        thinking="Dreams are creative",
+        drawn_card="Sleep",
+        log_path=Path("tests/test.log"),
+        raw_response=raw_response_2,
+    )
+    round1.decision = JudgeDecision(
+        winning_card="Art",
+        winning_player=1,
+        reasoning="Art is the most creative",
+        log_path=Path("tests/test.log"),
+        raw_response=judge_raw_response,
+    )
+    game.rounds.append(round1)
+
+    # Test judge's view
+    messages = create_judge_messages(game, 0)
+    judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
+
+    # Judge should see their own raw response
+    assert_content_contains(judge_view, judge_raw_response)
+    # Judge should not see players' raw responses
+    assert raw_response_1 not in judge_view
+    assert raw_response_2 not in judge_view
 
 
 def test_game_history_visibility():
@@ -267,23 +319,30 @@ def test_game_history_visibility():
 
     # Set up a completed round
     round1 = Round(round_number=0, green_card="Cold", judge=0)
+    raw_response_1 = '{"reasoning": "Ice is frozen water", "card": "Ice"}'
+    raw_response_2 = '{"reasoning": "Winter is the coldest season", "card": "Winter"}'
+    judge_raw_response = '{"reasoning": "Ice is literally frozen and therefore the coldest", "card": "Ice"}'
+
     round1.moves[1] = PlayerMove(
         played_card="Ice",
         thinking="Ice is frozen water",
         drawn_card="Snow",
         log_path=Path("tests/test.log"),
+        raw_response=raw_response_1,
     )
     round1.moves[2] = PlayerMove(
         played_card="Winter",
         thinking="Winter is the coldest season",
         drawn_card="Fall",
         log_path=Path("tests/test.log"),
+        raw_response=raw_response_2,
     )
     round1.decision = JudgeDecision(
         winning_card="Ice",
         winning_player=1,
         reasoning="Ice is literally frozen and therefore the coldest",
         log_path=Path("tests/test.log"),
+        raw_response=judge_raw_response,
     )
     game.rounds.append(round1)
 
@@ -307,10 +366,8 @@ def test_game_history_visibility():
     messages = create_player_messages(game, 0, "Hot", ["Sun", "Star"])
     player1_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Should see their own thinking from judging
-    assert_content_contains(
-        player1_view, "Ice is literally frozen and therefore the coldest"
-    )
+    # Should see their own raw response from judging
+    assert_content_contains(player1_view, judge_raw_response)
     # Should see winning player's identity
     assert_content_contains(
         player1_view, "Player 2 played the Ice card, and won this round!"
@@ -319,16 +376,19 @@ def test_game_history_visibility():
     assert_content_contains(player1_view, "The played red cards are:")
     assert_content_contains(player1_view, "- Ice")
     assert_content_contains(player1_view, "- Winter")
-    # Should see their own reasoning as judge
+    # Should see their own judgement was used
     assert_content_contains(player1_view, "Your judgement was:")
     assert_content_contains(player1_view, "You selected 'Ice' as the winner.")
+    # Should not see other players' raw responses
+    assert raw_response_1 not in player1_view
+    assert raw_response_2 not in player1_view
 
     # Test Player 2's view (winner of first round, judge in second)
     messages = create_judge_messages(game, 1)
     player2_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Should see their own thinking from winning move
-    assert_content_contains(player2_view, "Ice is frozen water")
+    # Should see their own raw response from winning move
+    assert_content_contains(player2_view, raw_response_1)
     # Should see all played cards listed together
     assert_content_contains(player2_view, "The played red cards are:")
     assert_content_contains(player2_view, "- Ice")
@@ -340,8 +400,10 @@ def test_game_history_visibility():
     # Should see current round cards anonymously
     assert_content_contains(player2_view, "Fire")
     assert_content_contains(player2_view, "Desert")
-    # Should not see previous judge's reasoning
-    assert "Ice is literally frozen and therefore the coldest" not in player2_view
+    # Should not see judge's raw response
+    assert judge_raw_response not in player2_view
+    # Should not see other player's raw response
+    assert raw_response_2 not in player2_view
     assert_content_contains(
         player2_view, "Player 1 (judge) selected 'Ice' as the winner."
     )
@@ -350,8 +412,8 @@ def test_game_history_visibility():
     messages = create_player_messages(game, 2, "Hot", ["Desert"])
     player3_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Should see their own thinking
-    assert_content_contains(player3_view, "Winter is the coldest season")
+    # Should see their own raw response
+    assert_content_contains(player3_view, raw_response_2)
     # Should see all played cards listed together
     assert_content_contains(player3_view, "The played red cards are:")
     assert_content_contains(player3_view, "- Ice")
@@ -362,11 +424,9 @@ def test_game_history_visibility():
     )
     # Should see current round cards anonymously
     assert_content_contains(player3_view, "The played red cards are:")
-    # Should not see other players' thinking
-    assert "Fire is extremely hot" not in player3_view
-    assert "Ice is frozen water" not in player3_view
-    # Should not see judge's reasoning
-    assert "Ice is literally frozen and therefore the coldest" not in player3_view
+    # Should not see other players' raw responses
+    assert raw_response_1 not in player3_view
+    assert judge_raw_response not in player3_view
     # Should only see the decision
     assert_content_contains(
         player3_view, "Player 1 (judge) selected 'Ice' as the winner."
