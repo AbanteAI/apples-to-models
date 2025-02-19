@@ -241,7 +241,7 @@ async def test_model_log_preservation():
             game = await run_game(
                 num_rounds=2,
                 num_players=2,
-                models=["gpt-4", "random"],
+                models=["gpt-4", "gpt-4"],  # Make both players use the model
                 save_game_path=os.path.join(temp_dir, "game_state.json"),
             )
 
