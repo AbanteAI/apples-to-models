@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 from openai.types.chat import ChatCompletionMessageParam
 
-from benchmark.game import Game, PlayerMove, Round
+from benchmark.game import BenchmarkStats, Game, PlayerMove, Round
 from benchmark.model_utils import Messages, ModelResponse
 from benchmark.prompts import create_judge_messages
 from benchmark.run import create_parser, main, model_move, run_game, validate_args
