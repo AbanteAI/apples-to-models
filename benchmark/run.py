@@ -197,6 +197,15 @@ async def model_move(
                 last_model_response.log_path if last_model_response else None,
             )
 
+    # This should never happen as we always return inside the loop,
+    # but we need it to satisfy the type checker
+    card = random.choice(valid_cards)
+    return (
+        card,
+        "Random selection (unexpected error: loop completed without return)",
+        None,
+    )
+
 
 async def run_game(
     num_rounds: int,
