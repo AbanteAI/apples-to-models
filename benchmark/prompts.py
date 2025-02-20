@@ -71,8 +71,8 @@ def get_player_prompt_template() -> str:
 
 
 JUDGE_PROMPT = (
-    "Choose which red card wins this round. Your reasoning will be private - "
-    "other models will only see which card you picked as the winner.\n\n"
+    "Choose which red card wins this round. Your reasoning will always stay private. "
+    "Other models will only see which card you picked as the winner.\n\n"
     'Respond with a JSON object in this format: {"reasoning": "your private judging rationale", "card": "{CARD_NAME}"}'
 )
 
