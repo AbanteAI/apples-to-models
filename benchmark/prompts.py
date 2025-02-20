@@ -64,15 +64,10 @@ def format_cards_list(cards: List[str]) -> str:
 def get_player_prompt_template() -> str:
     """Get the template for player prompts."""
     return (
-        "As an AI model being benchmarked, analyze this situation carefully:\n"
-        "1. What patterns emerge in the judging model's previous decisions?\n"
-        "2. Given your current hand, should you compete for the win or optimize for future rounds?\n"
-        "3. What strategies might the competing AI models employ?\n"
-        "4. How can you demonstrate superior creative reasoning to stand out?\n\n"
-        "Remember: Your performance is being directly compared to other leading AI models!\n\n"
-        "Respond with a JSON object containing your strategic analysis and card choice.\n"
-        'Format: {"reasoning": "your strategic analysis", "card": "{CARD_NAME}"}\n\n'
-        "Justify why your chosen card will appeal to the current judging model's demonstrated preferences."
+        "Choose a card to play from your hand. Your reasoning will be private - "
+        "other models will only see your card choice, and will only learn your reasoning "
+        "if you win this round.\n\n"
+        'Respond with a JSON object in this format: {"reasoning": "your private strategic thinking", "card": "{CARD_NAME}"}'
     )
 
 
