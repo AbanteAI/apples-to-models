@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -12,6 +13,14 @@ from benchmark.game import Game, PlayerMove, Round
 from benchmark.model_utils import Messages, ModelResponse
 from benchmark.prompts import create_judge_messages
 from benchmark.run import create_parser, main, model_move, run_game, validate_args
+
+
+def get_message_content(msg: dict[str, Any]) -> str:
+    """Safely extract message content as string."""
+    content = msg.get("content")
+    if content is None:
+        return ""
+    return str(content)
 
 
 def test_argument_validation():
@@ -330,7 +339,7 @@ async def test_model_log_preservation(mock_call_model):
         assert log_path == player_valid_response.log_path
 
         # Verify error messages were added
-        error_messages = [msg.get("content", "") for msg in messages.messages]
+        error_messages = [get_message_content(msg) for msg in messages.messages]
         assert any("Invalid JSON response" in msg for msg in error_messages)
         assert any("not in player's hand" in msg for msg in error_messages)
 
@@ -385,7 +394,7 @@ async def test_model_move_retries(mock_call_model):
     assert mock_call_model.call_count == 2
     # Verify error guidance was added
     assert any(
-        "Invalid JSON response" in msg.get("content", "") for msg in messages.messages
+        "Invalid JSON response" in get_message_content(msg) for msg in messages.messages
     )
 
     # Test case 2: Success after second retry (invalid card then JSON error)
@@ -635,7 +644,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert log_path == Path("tests/test.log")  # Log path should be preserved
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify error guidance was added
-    error_messages = [msg.get("content", "") for msg in messages.messages]
+    error_messages = [get_message_content(msg) for msg in messages.messages]
     error_count = sum(
         1
         for msg in error_messages
@@ -670,7 +679,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert log_path == Path("tests/test.log")  # Log path should be preserved
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify error guidance was added
-    error_messages = [msg.get("content", "") for msg in messages.messages]
+    error_messages = [get_message_content(msg) for msg in messages.messages]
     error_count = sum(
         1 for msg in error_messages if "which is not in played cards" in msg
     )
