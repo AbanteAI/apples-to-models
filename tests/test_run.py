@@ -339,7 +339,7 @@ async def test_model_log_preservation(mock_call_model):
             player_valid_response,
         ]
 
-        card, thinking, log_path = await model_move(
+        card, thinking, log_path, model_response = await model_move(
             "test-model", valid_cards, messages, "player"
         )
 
@@ -347,6 +347,7 @@ async def test_model_log_preservation(mock_call_model):
         assert card == "Card1"
         assert thinking == "Good thinking"
         assert log_path == player_valid_response.log_path
+        assert model_response == player_valid_response
 
         # Verify error messages were added
         error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -399,12 +400,13 @@ async def test_model_move_retries(mock_call_model):
         ),
     ]
     mock_call_model.side_effect = responses.copy()  # Use copy to preserve list
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         "test-model", test1_cards, messages, "player"
     )
     assert card == "Card2"  # Updated to match the expected card
     assert thinking == "Good choice"
     assert log_path == Path("tests/test2.log")
+    assert model_response == responses[1]  # Should get the second (successful) response
     assert mock_call_model.call_count == 2
     # Verify error guidance was added
     assert any(
@@ -447,12 +449,13 @@ async def test_model_move_retries(mock_call_model):
         ),
     ]
     mock_call_model.side_effect = responses.copy()  # Use copy to preserve list
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         "test-model", test2_cards, messages, "player"
     )
     assert card == "Card2"  # Should get Card2 from the final successful response
     assert thinking == "Finally good"
     assert log_path == Path("tests/test5.log")
+    assert model_response == responses[2]  # Should get the final successful response
     assert mock_call_model.call_count == 3
     # Verify error guidances were added
     error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -496,7 +499,7 @@ async def test_model_move_retries(mock_call_model):
     ]
     mock_call_model.side_effect = responses
     test3_cards = ["Card5", "Card6"]  # Different set of valid cards
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         "test-model", test3_cards, messages, "player"
     )
     assert card in test3_cards  # Should be random choice from valid cards
@@ -504,6 +507,9 @@ async def test_model_move_retries(mock_call_model):
     assert "after 3 attempts" in thinking
     assert "Invalid3" in thinking  # Should include last raw response
     assert log_path == Path("tests/test8.log")
+    assert (
+        model_response == responses[2]
+    )  # Should get the last response even though it failed
     assert mock_call_model.call_count == 3
     # Verify all error guidances were added
     error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -553,7 +559,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.return_value = mock_response
     messages = create_judge_messages(game, round.judge)
     played_cards = [move.played_card for move in round.moves.values()]
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
@@ -562,6 +568,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert card == "Queen Elizabeth"
     assert thinking == "After careful consideration"
     assert log_path == Path("tests/test.log")
+    assert model_response == mock_response
     mock_call_model.assert_called_once()
 
     # Test case 2: Model responds with proper JSON format and punctuation
@@ -576,7 +583,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
@@ -585,6 +592,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert card == "Queen Elizabeth"
     assert thinking == "She's very graceful!"
     assert log_path == Path("tests/test.log")
+    assert model_response == mock_response
     mock_call_model.assert_called_once()
 
     # Test case 3: Model responds with proper JSON format and different case
@@ -599,7 +607,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
@@ -608,6 +616,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert card == "Queen Elizabeth"
     assert thinking == "Most graceful choice"
     assert log_path == Path("tests/test.log")
+    assert model_response == mock_response
     mock_call_model.assert_called_once()
 
     # Test case 4: Model responds with invalid JSON
@@ -624,7 +633,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.side_effect = [
         mock_response
     ] * 3  # Will be called 3 times for retries
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
@@ -635,6 +644,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert "Your entire response must be valid JSON" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
+    assert (
+        model_response == mock_response
+    )  # Should get the last response even though it failed
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
 
     # Test case 5: Model responds with JSON missing required fields
@@ -651,7 +663,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.side_effect = [
         mock_response
     ] * 3  # Will be called 3 times for retries
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
@@ -664,6 +676,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
+    assert (
+        model_response == mock_response
+    )  # Should get the last response even though it failed
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify error guidance was added
     error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -688,7 +703,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.side_effect = [
         mock_response
     ] * 3  # Will be called 3 times for retries
-    card, thinking, log_path = await model_move(
+    card, thinking, log_path, model_response = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
@@ -699,6 +714,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert "which is not in played cards" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
+    assert (
+        model_response == mock_response
+    )  # Should get the last response even though it failed
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify error guidance was added
     error_messages = [get_message_content(msg) for msg in messages.messages]

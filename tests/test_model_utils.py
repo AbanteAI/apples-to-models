@@ -31,6 +31,7 @@ async def test_call_model():
     assert isinstance(response.tokens_completion, int)
     assert isinstance(response.total_cost, float)
     assert isinstance(response.generation_id, str)
+    assert isinstance(response.log_path, (Path, type(None)))
 
     # Basic validation of values
     assert response.tokens_prompt > 0

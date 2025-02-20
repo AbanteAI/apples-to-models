@@ -261,6 +261,7 @@ async def run_game(
 
                 player = game.players[player_idx]
 
+                model_response = None
                 if model == "random":
                     card = random.choice(player.hand)
                     thinking = "Random selection"
@@ -318,6 +319,8 @@ async def run_game(
                     messages=messages,
                     role="judge",
                 )
+                # Ensure log_path is a Path object
+                log_path = log_path if log_path else Path("benchmark/logs/no_log.txt")
 
             # Record the decision
             game.judge_round(winning_card, thinking, model_response)
@@ -326,7 +329,9 @@ async def run_game(
                     winning_card=winning_card,
                     winning_player=game.rounds[-1].decision.winning_player,
                     reasoning=thinking,
-                    log_path=log_path,
+                    log_path=log_path
+                    if log_path
+                    else Path("benchmark/logs/no_log.txt"),
                     raw_response=model_response.content if model_response else None,
                 )
 
