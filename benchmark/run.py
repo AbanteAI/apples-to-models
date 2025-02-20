@@ -135,8 +135,9 @@ async def model_move(
     valid_cards: List[str],
     messages: Messages,
     role: str,
+    game: Optional[Game] = None,
     max_attempts: int = 3,
-) -> Tuple[str, str, Optional[Path], Optional[ModelResponse]]:
+) -> Tuple[str, str, Optional[Path], Optional[ModelResponse], List[ModelResponse]]:
     """Make a model-based move for either a player or judge.
 
     Args:
@@ -144,14 +145,16 @@ async def model_move(
         valid_cards: List of valid cards to choose from (hand or played cards)
         messages: Messages object for the model
         role: Either "player" or "judge" to customize error messages
+        game: Optional Game instance to update benchmark stats for each attempt
         max_attempts: Maximum number of attempts to get a valid response (default 3)
 
     Returns:
-        Tuple of (chosen_card, thinking, log_path, model_response)
+        Tuple of (chosen_card, thinking, log_path, final_model_response, all_model_responses)
     """
     valid_type = "player's hand" if role == "player" else "played cards"
     last_model_response = None
     last_error = None
+    all_model_responses: List[ModelResponse] = []
 
     for attempt in range(max_attempts):
         try:
@@ -177,6 +180,11 @@ async def model_move(
 
             model_response = await call_model(model, messages)
             last_model_response = model_response
+            all_model_responses.append(model_response)
+
+            # Update benchmark stats if game instance provided
+            if game:
+                game.benchmark_stats.add_response(model_response)
 
             # Parse JSON response
             thinking, card = parse_model_response(model_response.content)
@@ -192,7 +200,13 @@ async def model_move(
                     f"Model chose card '{card}' which is not in {valid_type}: {valid_cards}"
                 )
 
-            return card, thinking, model_response.log_path, model_response
+            return (
+                card,
+                thinking,
+                model_response.log_path,
+                model_response,
+                all_model_responses,
+            )
 
         except Exception as e:
             last_error = str(e)
@@ -223,6 +237,7 @@ async def model_move(
         ),
         last_model_response.log_path if last_model_response else None,
         last_model_response,
+        all_model_responses,
     )
 
 
@@ -279,6 +294,7 @@ async def run_game(
                 player = game.players[player_idx]
 
                 model_response = None
+                all_model_responses = []
                 if model == "random":
                     card = random.choice(player.hand)
                     thinking = "Random selection"
@@ -287,11 +303,18 @@ async def run_game(
                     messages = create_player_messages(
                         game, player_idx, round.green_card, player.hand
                     )
-                    card, thinking, log_path, model_response = await model_move(
+                    (
+                        card,
+                        thinking,
+                        log_path,
+                        model_response,
+                        all_model_responses,
+                    ) = await model_move(
                         model=model,
                         valid_cards=player.hand,
                         messages=messages,
                         role="player",
+                        game=game,
                     )
 
                 # Print all player output together after the model call
@@ -327,14 +350,22 @@ async def run_game(
                 thinking = "Random selection"
                 log_path = Path("benchmark/logs/no_log.txt")
                 model_response = None
+                all_model_responses = []
             else:
                 messages = create_judge_messages(game, round.judge)
                 played_cards = [move.played_card for move in round.moves.values()]
-                winning_card, thinking, log_path, model_response = await model_move(
+                (
+                    winning_card,
+                    thinking,
+                    log_path,
+                    model_response,
+                    all_model_responses,
+                ) = await model_move(
                     model=judge_model,
                     valid_cards=played_cards,
                     messages=messages,
                     role="judge",
+                    game=game,
                 )
                 # Ensure log_path is a Path object
                 log_path = log_path if log_path else Path("benchmark/logs/no_log.txt")

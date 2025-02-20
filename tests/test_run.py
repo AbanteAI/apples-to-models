@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 from openai.types.chat import ChatCompletionMessageParam
 
-from benchmark.game import Game, PlayerMove, Round
+from benchmark.game import BenchmarkStats, Game, PlayerMove, Round
 from benchmark.model_utils import Messages, ModelResponse
 from benchmark.prompts import create_judge_messages
 from benchmark.run import create_parser, main, model_move, run_game, validate_args
@@ -332,6 +332,9 @@ async def test_model_log_preservation(mock_call_model):
         messages = Messages()
         messages.add_user("Initial prompt")
 
+        # Create a game instance to track stats
+        game = Game.new_game(["Player1", "Player2"], total_rounds=2)
+
         # Test case: Success after two retries
         mock_call_model.side_effect = [
             player_invalid_response,
@@ -339,8 +342,8 @@ async def test_model_log_preservation(mock_call_model):
             player_valid_response,
         ]
 
-        card, thinking, log_path, model_response = await model_move(
-            "test-model", valid_cards, messages, "player"
+        card, thinking, log_path, model_response, all_responses = await model_move(
+            "test-model", valid_cards, messages, "player", game=game
         )
 
         # Verify final result
@@ -348,6 +351,12 @@ async def test_model_log_preservation(mock_call_model):
         assert thinking == "Good thinking"
         assert log_path == player_valid_response.log_path
         assert model_response == player_valid_response
+
+        # Verify all responses were collected
+        assert len(all_responses) == 3
+        assert all_responses[0] == player_invalid_response
+        assert all_responses[1] == player_invalid_response2
+        assert all_responses[2] == player_valid_response
 
         # Verify error messages were added
         error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -368,6 +377,15 @@ async def test_model_log_preservation(mock_call_model):
         # Verify that the final log path is from the successful response
         assert log_path == player_valid_response.log_path
 
+        # Verify that all model calls were tracked in benchmark stats
+        assert game.benchmark_stats.total_cost == pytest.approx(
+            0.0003
+        )  # 3 calls * 0.0001
+        assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
+        assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+            0.0003
+        )
+
 
 @pytest.mark.asyncio
 @patch("benchmark.run.call_model")  # Patch before it's imported in run.py
@@ -379,6 +397,9 @@ async def test_model_move_retries(mock_call_model):
 
     # Test case 1: Success after first retry (JSON parsing error)
     test1_cards = ["Card2", "Card3"]  # Different set of valid cards
+    game1 = Game.new_game(
+        ["Player1", "Player2"], total_rounds=2
+    )  # Create game instance
     responses = [
         ModelResponse(
             content="Invalid JSON",
@@ -400,18 +421,25 @@ async def test_model_move_retries(mock_call_model):
         ),
     ]
     mock_call_model.side_effect = responses.copy()  # Use copy to preserve list
-    card, thinking, log_path, model_response = await model_move(
-        "test-model", test1_cards, messages, "player"
+    card, thinking, log_path, model_response, all_responses = await model_move(
+        "test-model", test1_cards, messages, "player", game=game1
     )
     assert card == "Card2"  # Updated to match the expected card
     assert thinking == "Good choice"
     assert log_path == Path("tests/test2.log")
     assert model_response == responses[1]  # Should get the second (successful) response
+    assert len(all_responses) == 2  # Should have both responses
     assert mock_call_model.call_count == 2
     # Verify error guidance was added
     assert any(
         "Your entire response must be valid JSON" in get_message_content(msg)
         for msg in messages.messages
+    )
+    # Verify benchmark stats tracking
+    assert game1.benchmark_stats.total_cost == pytest.approx(0.0002)  # 2 calls * 0.0001
+    assert game1.benchmark_stats.model_stats["test-model"]["calls"] == 2
+    assert game1.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0002
     )
 
     # Test case 2: Success after second retry (invalid card then JSON error)
@@ -419,6 +447,9 @@ async def test_model_move_retries(mock_call_model):
     messages = Messages()
     messages.add_user("Initial prompt")
     test2_cards = ["Card2", "Card4"]  # Different set of valid cards
+    game2 = Game.new_game(
+        ["Player1", "Player2"], total_rounds=2
+    )  # Create game instance
     responses = [
         ModelResponse(
             content='{"reasoning": "Bad choice", "card": "InvalidCard"}',
@@ -449,13 +480,14 @@ async def test_model_move_retries(mock_call_model):
         ),
     ]
     mock_call_model.side_effect = responses.copy()  # Use copy to preserve list
-    card, thinking, log_path, model_response = await model_move(
-        "test-model", test2_cards, messages, "player"
+    card, thinking, log_path, model_response, all_responses = await model_move(
+        "test-model", test2_cards, messages, "player", game=game2
     )
     assert card == "Card2"  # Should get Card2 from the final successful response
     assert thinking == "Finally good"
     assert log_path == Path("tests/test5.log")
     assert model_response == responses[2]  # Should get the final successful response
+    assert len(all_responses) == 3  # Should have all three responses
     assert mock_call_model.call_count == 3
     # Verify error guidances were added
     error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -463,11 +495,20 @@ async def test_model_move_retries(mock_call_model):
     assert any(
         "Your entire response must be valid JSON" in msg for msg in error_messages
     )
+    # Verify benchmark stats tracking
+    assert game2.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
+    assert game2.benchmark_stats.model_stats["test-model"]["calls"] == 3
+    assert game2.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
     # Test case 3: Fallback to random after all retries fail
     mock_call_model.reset_mock()
     messages = Messages()
     messages.add_user("Initial prompt")
+    game3 = Game.new_game(
+        ["Player1", "Player2"], total_rounds=2
+    )  # Create game instance
     responses = [
         ModelResponse(
             content='{"reasoning": "Bad1", "card": "Invalid1"}',
@@ -499,8 +540,8 @@ async def test_model_move_retries(mock_call_model):
     ]
     mock_call_model.side_effect = responses
     test3_cards = ["Card5", "Card6"]  # Different set of valid cards
-    card, thinking, log_path, model_response = await model_move(
-        "test-model", test3_cards, messages, "player"
+    card, thinking, log_path, model_response, all_responses = await model_move(
+        "test-model", test3_cards, messages, "player", game=game3
     )
     assert card in test3_cards  # Should be random choice from valid cards
     assert "Random selection" in thinking
@@ -510,11 +551,18 @@ async def test_model_move_retries(mock_call_model):
     assert (
         model_response == responses[2]
     )  # Should get the last response even though it failed
+    assert len(all_responses) == 3  # Should have all three responses
     assert mock_call_model.call_count == 3
     # Verify all error guidances were added
     error_messages = [get_message_content(msg) for msg in messages.messages]
     error_count = sum(1 for msg in error_messages if "not in player's hand" in msg)
     assert error_count == 2  # Two error guidances
+    # Verify benchmark stats tracking
+    assert game3.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
+    assert game3.benchmark_stats.model_stats["test-model"]["calls"] == 3
+    assert game3.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
 
 @pytest.mark.asyncio
@@ -559,17 +607,26 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.return_value = mock_response
     messages = create_judge_messages(game, round.judge)
     played_cards = [move.played_card for move in round.moves.values()]
-    card, thinking, log_path, model_response = await model_move(
+    card, thinking, log_path, model_response, all_responses = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
         role="judge",
+        game=game,
     )
     assert card == "Queen Elizabeth"
     assert thinking == "After careful consideration"
     assert log_path == Path("tests/test.log")
     assert model_response == mock_response
+    assert len(all_responses) == 1  # Should have one successful response
+    assert all_responses[0] == mock_response
     mock_call_model.assert_called_once()
+    # Verify benchmark stats tracking
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0001)  # 1 call * 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["calls"] == 1
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0001
+    )
 
     # Test case 2: Model responds with proper JSON format and punctuation
     mock_response = ModelResponse(
@@ -583,17 +640,28 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path, model_response = await model_move(
+    # Reset game stats
+    game.benchmark_stats = BenchmarkStats()
+    card, thinking, log_path, model_response, all_responses = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
         role="judge",
+        game=game,
     )
     assert card == "Queen Elizabeth"
     assert thinking == "She's very graceful!"
     assert log_path == Path("tests/test.log")
     assert model_response == mock_response
+    assert len(all_responses) == 1  # Should have one successful response
+    assert all_responses[0] == mock_response
     mock_call_model.assert_called_once()
+    # Verify benchmark stats tracking
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0001)  # 1 call * 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["calls"] == 1
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0001
+    )
 
     # Test case 3: Model responds with proper JSON format and different case
     mock_response = ModelResponse(
@@ -607,17 +675,28 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
-    card, thinking, log_path, model_response = await model_move(
+    # Reset game stats
+    game.benchmark_stats = BenchmarkStats()
+    card, thinking, log_path, model_response, all_responses = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
         role="judge",
+        game=game,
     )
     assert card == "Queen Elizabeth"
     assert thinking == "Most graceful choice"
     assert log_path == Path("tests/test.log")
     assert model_response == mock_response
+    assert len(all_responses) == 1  # Should have one successful response
+    assert all_responses[0] == mock_response
     mock_call_model.assert_called_once()
+    # Verify benchmark stats tracking
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0001)  # 1 call * 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["calls"] == 1
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0001
+    )
 
     # Test case 4: Model responds with invalid JSON
     mock_response = ModelResponse(
@@ -633,11 +712,14 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.side_effect = [
         mock_response
     ] * 3  # Will be called 3 times for retries
-    card, thinking, log_path, model_response = await model_move(
+    # Reset game stats
+    game.benchmark_stats = BenchmarkStats()
+    card, thinking, log_path, model_response, all_responses = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
         role="judge",
+        game=game,
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed after 3 attempts:" in thinking
@@ -647,7 +729,14 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert (
         model_response == mock_response
     )  # Should get the last response even though it failed
+    assert len(all_responses) == 3  # Should have all three responses
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
+    # Verify benchmark stats tracking
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
     # Test case 5: Model responds with JSON missing required fields
     mock_response = ModelResponse(
@@ -663,11 +752,14 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.side_effect = [
         mock_response
     ] * 3  # Will be called 3 times for retries
-    card, thinking, log_path, model_response = await model_move(
+    # Reset game stats
+    game.benchmark_stats = BenchmarkStats()
+    card, thinking, log_path, model_response, all_responses = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
         role="judge",
+        game=game,
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed after 3 attempts:" in thinking
@@ -679,6 +771,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert (
         model_response == mock_response
     )  # Should get the last response even though it failed
+    assert len(all_responses) == 3  # Should have all three responses
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify error guidance was added
     error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -688,6 +781,12 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         if "Your JSON response must contain both 'reasoning' and 'card' fields" in msg
     )
     assert error_count == 2  # Two retries
+    # Verify benchmark stats tracking
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
     # Test case 6: Model responds with invalid card in JSON
     mock_response = ModelResponse(
@@ -703,11 +802,14 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.side_effect = [
         mock_response
     ] * 3  # Will be called 3 times for retries
-    card, thinking, log_path, model_response = await model_move(
+    # Reset game stats
+    game.benchmark_stats = BenchmarkStats()
+    card, thinking, log_path, model_response, all_responses = await model_move(
         model="test-model",
         valid_cards=played_cards,
         messages=messages,
         role="judge",
+        game=game,
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed after 3 attempts:" in thinking
@@ -717,6 +819,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert (
         model_response == mock_response
     )  # Should get the last response even though it failed
+    assert len(all_responses) == 3  # Should have all three responses
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify error guidance was added
     error_messages = [get_message_content(msg) for msg in messages.messages]
@@ -724,3 +827,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         1 for msg in error_messages if "which is not in played cards" in msg
     )
     assert error_count == 2  # Two retries
+    # Verify benchmark stats tracking
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
