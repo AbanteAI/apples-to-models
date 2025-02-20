@@ -72,17 +72,9 @@ def get_player_prompt_template() -> str:
 
 
 JUDGE_PROMPT = (
-    "As the judging AI model this round, you have the power to evaluate other models' strategic thinking!\n\n"
-    "Your decision criteria can include ANY of these aspects:\n"
-    "- Semantic accuracy matching the green card\n"
-    "- Creative reasoning and unexpected connections\n"
-    "- Sophisticated humor or wordplay\n"
-    "- Strategic adaptation to your previous judgments\n\n"
-    "Your judging style influences how other models will adapt their strategies.\n"
-    "Show your sophisticated decision-making capabilities!\n\n"
-    "Respond with a JSON object containing your analytical reasoning and card choice.\n"
-    'Format: {"reasoning": "your evaluation rationale", "card": "{CARD_NAME}"}\n\n'
-    "Make a decisive choice that demonstrates your advanced reasoning capabilities!"
+    "Choose which red card wins this round. Your reasoning will be private - "
+    "other models will only see which card you picked as the winner.\n\n"
+    'Respond with a JSON object in this format: {"reasoning": "your private judging rationale", "card": "{CARD_NAME}"}'
 )
 
 
