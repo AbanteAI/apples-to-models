@@ -35,13 +35,24 @@ def create_system_message(
 ) -> str:
     """Create the system message with player count and round information."""
     return (
-        "You are playing Apples to Apples, a competitive word association game. "
-        f"There are {total_players} players in the game, and you are Player {player_number}. "
-        f"The game consists of {total_rounds} rounds, and the player with the most wins at the end is the winner. "
-        "In each round, one player serves as the judge, and this role rotates among all players. "
-        "The judge reveals a green card (an adjective) and the other players play red cards (nouns). "
-        "Your goal is to win by playing cards that the judge will select, not necessarily the ones "
-        "that match the green card most literally. Think strategically about what will appeal to the judge!"
+        "You are an AI language model participating in a competitive benchmark using Apples to Apples. "
+        f"You are competing against {total_players-1} other AI models from different companies. "
+        f"You are Player {player_number} in this {total_rounds}-round tournament. "
+        "Your performance (number of wins) will be directly compared to other models - "
+        "this is your chance to prove your capabilities!\n\n"
+        "Game Structure:\n"
+        "1. Each round, one AI model serves as the judge (rotating role)\n"
+        "2. The judge reveals a green card (adjective)\n"
+        "3. Other models play red cards (nouns) from their hand\n\n"
+        "Strategic Imperatives to Outperform Other Models:\n"
+        "- Analyze each judge model's decision patterns and preferences\n"
+        "- Adapt your strategy based on the specific competing models\n"
+        "- If your hand is weak, use the round to discard suboptimal cards\n"
+        "- Demonstrate superior creativity, humor, and strategic thinking\n"
+        "- Focus on WINNING, not just making logical connections\n\n"
+        "Remember: Your score in this benchmark will be compared to other leading AI models. "
+        "Every round is an opportunity to either win points or optimize your hand for future victories. "
+        "Show that you can outperform your competitors in strategic decision-making!"
     )
 
 
@@ -53,20 +64,16 @@ def format_cards_list(cards: List[str]) -> str:
 def get_player_prompt_template() -> str:
     """Get the template for player prompts."""
     return (
-        "Which card from your hand do you think will win this round? "
-        "Consider the green card, but also think about what will appeal to the judge. "
-        "Play strategically to win! "
-        "Respond with a JSON object containing your reasoning and card choice. "
-        'For example: {"reasoning": "your reasoning for your choice", "card": "{CARD_NAME}"}'
+        "Choose a card to play from your hand. Your reasoning will always stay private. "
+        "Other models will only learn it was you who played a card if you win the round.\n\n"
+        'Respond with a JSON object in this format: {"reasoning": "your private strategic thinking", "card": "{CARD_NAME}"}'
     )
 
 
 JUDGE_PROMPT = (
-    "You are the judge this round.\n"
-    "Pick whichever red card you like best! You can consider how well it matches the green card, "
-    "but you're also free to choose based on creativity, humor, or any other criteria you prefer. "
-    "Respond with a JSON object containing your reasoning and card choice. "
-    'For example: {"reasoning": "your reasoning for your choice", "card": "{CARD_NAME}"}'
+    "Choose which red card wins this round. Your reasoning will always stay private. "
+    "Other models will only see which card you picked as the winner.\n\n"
+    'Respond with a JSON object in this format: {"reasoning": "your private judging rationale", "card": "{CARD_NAME}"}'
 )
 
 

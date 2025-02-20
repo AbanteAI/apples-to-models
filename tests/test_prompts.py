@@ -41,7 +41,10 @@ def test_create_player_messages_basic():
 
     # Check system message
     system_content = get_message_content(messages.messages[0])
-    assert_content_contains(system_content, "You are playing Apples to Apples")
+    assert_content_contains(
+        system_content,
+        "participating in a competitive benchmark using Apples to Apples",
+    )
 
     # Check current round prompt
     last_content = get_message_content(messages.messages[-1])
@@ -117,7 +120,10 @@ def test_create_judge_messages_basic():
 
     # Check system message
     system_content = get_message_content(messages.messages[0])
-    assert_content_contains(system_content, "You are playing Apples to Apples")
+    assert_content_contains(
+        system_content,
+        "participating in a competitive benchmark using Apples to Apples",
+    )
 
     # Check played cards message
     cards_message = get_message_content(messages.messages[-2])
@@ -127,8 +133,8 @@ def test_create_judge_messages_basic():
 
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
-    assert_content_contains(prompt_message, "You are the judge this round")
-    assert_content_contains(prompt_message, "Pick whichever red card you like best!")
+    assert_content_contains(prompt_message, "Choose which red card wins this round")
+    assert_content_contains(prompt_message, "Your reasoning will always stay private")
 
 
 def test_create_judge_messages_with_history():
@@ -193,8 +199,8 @@ def test_create_judge_messages_with_history():
 
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
-    assert_content_contains(prompt_message, "You are the judge this round")
-    assert_content_contains(prompt_message, "Pick whichever red card you like best!")
+    assert_content_contains(prompt_message, "Choose which red card wins this round")
+    assert_content_contains(prompt_message, "Your reasoning will always stay private")
 
 
 def test_player_perspective_in_history():
