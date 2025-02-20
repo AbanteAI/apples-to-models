@@ -126,6 +126,7 @@ async def model_move(
     valid_cards: List[str],
     messages: Messages,
     role: str,
+    max_attempts: int = 3,
 ) -> Tuple[str, str, Optional[Path]]:
     """Make a model-based move for either a player or judge.
 
@@ -134,50 +135,65 @@ async def model_move(
         valid_cards: List of valid cards to choose from (hand or played cards)
         messages: Messages object for the model
         role: Either "player" or "judge" to customize error messages
+        max_attempts: Maximum number of attempts to get a valid response (default 3)
 
     Returns:
         Tuple of (chosen_card, thinking, log_path)
     """
-    model_response = None
-    try:
-        model_response = await call_model(model, messages)
+    valid_type = "player's hand" if role == "player" else "played cards"
+    last_model_response = None
+    last_error = None
 
-        # Parse JSON response
+    for attempt in range(max_attempts):
         try:
+            # If this isn't the first attempt, add error guidance
+            if attempt > 0:
+                error_guidance = (
+                    f"Your previous response was invalid: {last_error}\n\n"
+                    f"Please provide a valid JSON response in the format:\n"
+                    '{"reasoning": "your reasoning here", "card": "your card choice"}\n\n'
+                    f"You must choose from these {valid_type}: {valid_cards}"
+                )
+                messages.add_user(error_guidance)
+
+            model_response = await call_model(model, messages)
+            last_model_response = model_response
+
+            # Parse JSON response
             thinking, card = parse_model_response(model_response.content)
-        except ValueError as e:
-            raise ValueError(str(e))
 
-        # Normalize card name and find match
-        normalized_card = normalize_card_name(card)
-        for original_card in valid_cards:
-            if normalize_card_name(original_card) == normalized_card:
-                card = original_card
-                break
-        else:
-            valid_type = "player's hand" if role == "player" else "played cards"
-            raise ValueError(
-                f"Model chose card '{card}' which is not in {valid_type}: {valid_cards}"
-            )
+            # Normalize card name and find match
+            normalized_card = normalize_card_name(card)
+            for original_card in valid_cards:
+                if normalize_card_name(original_card) == normalized_card:
+                    card = original_card
+                    break
+            else:
+                raise ValueError(
+                    f"Model chose card '{card}' which is not in {valid_type}: {valid_cards}"
+                )
 
-        return card, thinking, model_response.log_path
+            return card, thinking, model_response.log_path
 
-    except Exception as e:
-        # If we have a model response but failed to parse it, include the raw response
-        if model_response:
-            error_msg = f"Model failed to provide valid response: {str(e)}\nRaw response: {model_response.content}"
-            print(f"\nError parsing {role} response: {error_msg}")
-            card = random.choice(valid_cards)
-            return (
-                card,
-                f"Random selection (model failed: {str(e)})\nRaw response: {model_response.content}",
-                model_response.log_path,
-            )
-        else:
-            # Model call itself failed
-            print(f"Model error for {role}, falling back to random: {str(e)}")
-            card = random.choice(valid_cards)
-            return card, f"Random selection (model failed: {str(e)})", None
+        except Exception as e:
+            last_error = str(e)
+            if attempt == max_attempts - 1:
+                # If we've exhausted all attempts, fall back to random
+                error_msg = f"Model failed to provide valid response after {max_attempts} attempts: {last_error}"
+                if last_model_response:
+                    error_msg += f"\nLast raw response: {last_model_response.content}"
+                print(f"\nError parsing {role} response: {error_msg}")
+                card = random.choice(valid_cards)
+                return (
+                    card,
+                    f"Random selection (model failed: {last_error})"
+                    + (
+                        f"\nLast raw response: {last_model_response.content}"
+                        if last_model_response
+                        else ""
+                    ),
+                    last_model_response.log_path if last_model_response else None,
+                )
 
 
 async def run_game(
