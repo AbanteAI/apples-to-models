@@ -432,9 +432,11 @@ async def test_model_move_retries(mock_call_model):
         for msg in messages.messages
     )
     # Verify benchmark stats tracking
-    assert game1.benchmark_stats.total_cost == 0.0002  # 2 calls * 0.0001
+    assert game1.benchmark_stats.total_cost == pytest.approx(0.0002)  # 2 calls * 0.0001
     assert game1.benchmark_stats.model_stats["test-model"]["calls"] == 2
-    assert game1.benchmark_stats.model_stats["test-model"]["cost"] == 0.0002
+    assert game1.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0002
+    )
 
     # Test case 2: Success after second retry (invalid card then JSON error)
     mock_call_model.reset_mock()
@@ -490,9 +492,11 @@ async def test_model_move_retries(mock_call_model):
         "Your entire response must be valid JSON" in msg for msg in error_messages
     )
     # Verify benchmark stats tracking
-    assert game2.benchmark_stats.total_cost == 0.0003  # 3 calls * 0.0001
+    assert game2.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
     assert game2.benchmark_stats.model_stats["test-model"]["calls"] == 3
-    assert game2.benchmark_stats.model_stats["test-model"]["cost"] == 0.0003
+    assert game2.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
     # Test case 3: Fallback to random after all retries fail
     mock_call_model.reset_mock()
@@ -550,9 +554,11 @@ async def test_model_move_retries(mock_call_model):
     error_count = sum(1 for msg in error_messages if "not in player's hand" in msg)
     assert error_count == 2  # Two error guidances
     # Verify benchmark stats tracking
-    assert game3.benchmark_stats.total_cost == 0.0003  # 3 calls * 0.0001
+    assert game3.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
     assert game3.benchmark_stats.model_stats["test-model"]["calls"] == 3
-    assert game3.benchmark_stats.model_stats["test-model"]["cost"] == 0.0003
+    assert game3.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
 
 @pytest.mark.asyncio
@@ -612,9 +618,11 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert all_responses[0] == mock_response
     mock_call_model.assert_called_once()
     # Verify benchmark stats tracking
-    assert game.benchmark_stats.total_cost == 0.0001  # 1 call * 0.0001
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0001)  # 1 call * 0.0001
     assert game.benchmark_stats.model_stats["test-model"]["calls"] == 1
-    assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0001
+    )
 
     # Test case 2: Model responds with proper JSON format and punctuation
     mock_response = ModelResponse(
@@ -645,9 +653,11 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert all_responses[0] == mock_response
     mock_call_model.assert_called_once()
     # Verify benchmark stats tracking
-    assert game.benchmark_stats.total_cost == 0.0001  # 1 call * 0.0001
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0001)  # 1 call * 0.0001
     assert game.benchmark_stats.model_stats["test-model"]["calls"] == 1
-    assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0001
+    )
 
     # Test case 3: Model responds with proper JSON format and different case
     mock_response = ModelResponse(
@@ -678,9 +688,11 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert all_responses[0] == mock_response
     mock_call_model.assert_called_once()
     # Verify benchmark stats tracking
-    assert game.benchmark_stats.total_cost == 0.0001  # 1 call * 0.0001
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0001)  # 1 call * 0.0001
     assert game.benchmark_stats.model_stats["test-model"]["calls"] == 1
-    assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0001
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0001
+    )
 
     # Test case 4: Model responds with invalid JSON
     mock_response = ModelResponse(
@@ -716,9 +728,11 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert len(all_responses) == 3  # Should have all three responses
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
     # Verify benchmark stats tracking
-    assert game.benchmark_stats.total_cost == 0.0003  # 3 calls * 0.0001
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
     assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
-    assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0003
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
     # Test case 5: Model responds with JSON missing required fields
     mock_response = ModelResponse(
@@ -764,9 +778,11 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     assert error_count == 2  # Two retries
     # Verify benchmark stats tracking
-    assert game.benchmark_stats.total_cost == 0.0003  # 3 calls * 0.0001
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
     assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
-    assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0003
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
 
     # Test case 6: Model responds with invalid card in JSON
     mock_response = ModelResponse(
@@ -808,6 +824,8 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     assert error_count == 2  # Two retries
     # Verify benchmark stats tracking
-    assert game.benchmark_stats.total_cost == 0.0003  # 3 calls * 0.0001
+    assert game.benchmark_stats.total_cost == pytest.approx(0.0003)  # 3 calls * 0.0001
     assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
-    assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0003
+    assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+        0.0003
+    )
