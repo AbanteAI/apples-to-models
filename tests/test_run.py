@@ -493,8 +493,9 @@ async def test_model_move_retries(mock_call_model):
     assert log_path == Path("tests/test8.log")
     assert mock_call_model.call_count == 3
     # Verify all error guidances were added
-    messages_str = " ".join(str(msg) for msg in messages.messages)
-    assert messages_str.count("not in player's hand") == 2  # Two error guidances
+    error_messages = [get_message_content(msg) for msg in messages.messages]
+    error_count = sum(1 for msg in error_messages if "not in player's hand" in msg)
+    assert error_count == 2  # Two error guidances
 
 
 @pytest.mark.asyncio
@@ -617,7 +618,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         role="judge",
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-    assert "Random selection (model failed:" in thinking
+    assert "Random selection (model failed after 3 attempts:" in thinking
     assert "Invalid JSON response" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
@@ -644,7 +645,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         role="judge",
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-    assert "Random selection (model failed:" in thinking
+    assert "Random selection (model failed after 3 attempts:" in thinking
     assert "Response must contain 'reasoning' and 'card' fields" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
@@ -679,7 +680,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         role="judge",
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
-    assert "Random selection (model failed:" in thinking
+    assert "Random selection (model failed after 3 attempts:" in thinking
     assert "which is not in played cards" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
