@@ -4,10 +4,11 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 from unittest.mock import patch
 
 import pytest
+from openai.types.chat import ChatCompletionMessageParam
 
 from benchmark.game import Game, PlayerMove, Round
 from benchmark.model_utils import Messages, ModelResponse
@@ -15,9 +16,12 @@ from benchmark.prompts import create_judge_messages
 from benchmark.run import create_parser, main, model_move, run_game, validate_args
 
 
-def get_message_content(msg: dict[str, Any]) -> str:
+def get_message_content(msg: Union[dict[str, Any], ChatCompletionMessageParam]) -> str:
     """Safely extract message content as string."""
-    content = msg.get("content")
+    if isinstance(msg, dict):
+        content = msg.get("content")
+    else:
+        content = msg.get("content", None)
     if content is None:
         return ""
     return str(content)
