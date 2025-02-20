@@ -6,6 +6,7 @@ from openai.types.chat import (
 
 from benchmark.game import Game, JudgeDecision, PlayerMove, Round
 from benchmark.prompts import (
+    JUDGE_PROMPT,
     create_judge_messages,
     create_player_messages,
     get_player_prompt_template,
@@ -302,11 +303,41 @@ def test_raw_response_in_judge_messages():
     )
     game.rounds.append(round1)
 
-    # Test judge's view
+    # Start a new round with the same judge
+    round2 = Round(round_number=1, green_card="Bright", judge=0)
+    round2.moves[1] = PlayerMove(
+        played_card="Sun",
+        thinking="Sun is bright",
+        drawn_card="Star",
+        log_path=Path("tests/test.log"),
+    )
+    round2.moves[2] = PlayerMove(
+        played_card="Lightning",
+        thinking="Lightning is bright",
+        drawn_card="Fire",
+        log_path=Path("tests/test.log"),
+    )
+    game.rounds.append(round2)
+
+    # Test judge's view in current round (should see previous raw response)
     messages = create_judge_messages(game, 0)
     judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
 
-    # Judge should see their own raw response
+    # Judge should see their own raw response from previous round
+    assert_content_contains(judge_view, judge_raw_response)
+    # Judge should not see players' raw responses
+    assert raw_response_1 not in judge_view
+    assert raw_response_2 not in judge_view
+    # Judge should see the JUDGE_PROMPT for the current round
+    assert_content_contains(judge_view, JUDGE_PROMPT)
+
+    # Test judge's view in a new round where they're not judge
+    round3 = Round(round_number=2, green_card="Fast", judge=1)
+    game.rounds.append(round3)
+    messages = create_player_messages(game, 0, "Fast", ["Car", "Cheetah"])
+    judge_view = " ".join(get_message_content(msg) for msg in messages.messages)
+
+    # Judge should still see their own raw response from when they judged
     assert_content_contains(judge_view, judge_raw_response)
     # Judge should not see players' raw responses
     assert raw_response_1 not in judge_view

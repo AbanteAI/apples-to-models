@@ -150,7 +150,12 @@ def create_game_history(game: "Game", player_idx: int, is_judge: bool) -> Messag
                 else:
                     # Fallback for random moves or old game states
                     messages.add_assistant(
-                        f"{round.decision.reasoning} | {round.decision.winning_card}"
+                        json.dumps(
+                            {
+                                "reasoning": round.decision.reasoning,
+                                "card": round.decision.winning_card,
+                            }
+                        )
                     )
             else:
                 if round.judge == player_idx:
