@@ -278,7 +278,10 @@ def test_parse_model_response():
         parse_model_response('["thinking", "card"]')
 
     # Test response with wrong field names
-    with pytest.raises(ValueError, match="must contain 'reasoning' and 'card' fields"):
+    with pytest.raises(
+        ValueError,
+        match="Your JSON response must contain both 'reasoning' and 'card' fields",
+    ):
         parse_model_response('{"thought": "Good thinking", "choice": "Test Card"}')
 
 
@@ -667,7 +670,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     error_count = sum(
         1
         for msg in error_messages
-        if "Response must contain 'reasoning' and 'card' fields" in msg
+        if "Your JSON response must contain both 'reasoning' and 'card' fields" in msg
     )
     assert error_count == 2  # Two retries
 
