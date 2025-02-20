@@ -64,7 +64,8 @@ def format_cards_list(cards: List[str]) -> str:
 def get_player_prompt_template() -> str:
     """Get the template for player prompts."""
     return (
-        "Choose a card to play from your hand. Your reasoning will always stay private. "
+        "Choose a card to play from your hand. Consider who is judging this round and how they have judged in past rounds - "
+        "their previous decisions are shown in the game history above. Your reasoning will always stay private. "
         "Other models will only learn it was you who played a card if you win the round.\n\n"
         'Respond with a JSON object in this format: {"reasoning": "your private strategic thinking", "card": "{CARD_NAME}"}'
     )
