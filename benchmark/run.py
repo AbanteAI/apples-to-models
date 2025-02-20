@@ -189,7 +189,7 @@ async def model_move(
     card = random.choice(valid_cards)
     return (
         card,
-        f"Random selection (model failed: {last_error})"
+        f"Random selection (model failed after {max_attempts} attempts: {last_error})"
         + (
             f"\nLast raw response: {last_model_response.content}"
             if last_model_response
