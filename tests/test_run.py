@@ -259,7 +259,7 @@ def test_parse_model_response():
     assert card == "Test Card"
 
     # Test invalid JSON
-    with pytest.raises(ValueError, match="Invalid JSON response"):
+    with pytest.raises(ValueError, match="Your entire response must be valid JSON"):
         parse_model_response("not json")
 
     # Test missing required fields
@@ -344,7 +344,9 @@ async def test_model_log_preservation(mock_call_model):
 
         # Verify error messages were added
         error_messages = [get_message_content(msg) for msg in messages.messages]
-        assert any("Invalid JSON response" in msg for msg in error_messages)
+        assert any(
+            "Your entire response must be valid JSON" in msg for msg in error_messages
+        )
         assert any("not in player's hand" in msg for msg in error_messages)
 
         # Verify all model calls were made
@@ -398,7 +400,8 @@ async def test_model_move_retries(mock_call_model):
     assert mock_call_model.call_count == 2
     # Verify error guidance was added
     assert any(
-        "Invalid JSON response" in get_message_content(msg) for msg in messages.messages
+        "Your entire response must be valid JSON" in get_message_content(msg)
+        for msg in messages.messages
     )
 
     # Test case 2: Success after second retry (invalid card then JSON error)
@@ -446,7 +449,9 @@ async def test_model_move_retries(mock_call_model):
     # Verify error guidances were added
     error_messages = [get_message_content(msg) for msg in messages.messages]
     assert any("not in player's hand" in msg for msg in error_messages)
-    assert any("Invalid JSON response" in msg for msg in error_messages)
+    assert any(
+        "Your entire response must be valid JSON" in msg for msg in error_messages
+    )
 
     # Test case 3: Fallback to random after all retries fail
     mock_call_model.reset_mock()
@@ -619,7 +624,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed after 3 attempts:" in thinking
-    assert "Invalid JSON response" in thinking
+    assert "Your entire response must be valid JSON" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
