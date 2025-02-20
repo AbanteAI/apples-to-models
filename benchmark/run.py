@@ -122,7 +122,6 @@ def parse_model_response(content: str) -> tuple[str, str]:
 
 
 async def model_move(
-    *,
     model: str,
     valid_cards: List[str],
     messages: Messages,
