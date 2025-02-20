@@ -295,7 +295,7 @@ def generate_html_report(game: Game) -> str:
 
     # Add each round
     for round in game.rounds:
-        html += _generate_round_html(round, game.players, player_stats)
+        html += _generate_round_html(round, game.players)
 
     html += """
 </body>
@@ -304,7 +304,7 @@ def generate_html_report(game: Game) -> str:
     return html
 
 
-def _generate_round_html(round: Round, players: Dict, player_stats: Dict) -> str:
+def _generate_round_html(round: Round, players: Dict) -> str:
     """Generate HTML for a single round"""
     judge_name = players[round.judge].name
     html = f"""

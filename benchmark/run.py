@@ -7,7 +7,7 @@ import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from termcolor import cprint  # type: ignore
 
@@ -122,16 +122,14 @@ def parse_model_response(content: str) -> tuple[str, str]:
 
 
 async def model_move(
-    game: Game,
     model: str,
     valid_cards: List[str],
     messages: Messages,
     role: str,
-) -> tuple[str, str, Optional[Path]]:
+) -> Tuple[str, str, Optional[Path]]:
     """Make a model-based move for either a player or judge.
 
     Args:
-        game: The current game state
         model: The model to use for the move
         valid_cards: List of valid cards to choose from (hand or played cards)
         messages: Messages object for the model
@@ -243,7 +241,10 @@ async def run_game(
                         game, player_idx, round.green_card, player.hand
                     )
                     card, thinking, log_path = await model_move(
-                        game, model, player.hand, messages, "player"
+                        model=model,
+                        valid_cards=player.hand,
+                        messages=messages,
+                        role="player",
                     )
 
                 # Print all player output together after the model call
@@ -283,7 +284,10 @@ async def run_game(
                 messages = create_judge_messages(game, round.judge)
                 played_cards = [move.played_card for move in round.moves.values()]
                 winning_card, thinking, log_path = await model_move(
-                    game, judge_model, played_cards, messages, "judge"
+                    model=judge_model,
+                    valid_cards=played_cards,
+                    messages=messages,
+                    role="judge",
                 )
                 log_path = log_path if log_path else Path("benchmark/logs/no_log.txt")
 

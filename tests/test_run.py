@@ -414,7 +414,10 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     messages = create_judge_messages(game, round.judge)
     played_cards = [move.played_card for move in round.moves.values()]
     card, thinking, log_path = await model_move(
-        game, "test-model", played_cards, messages, "judge"
+        model="test-model",
+        valid_cards=played_cards,
+        messages=messages,
+        role="judge",
     )
     assert card == "Queen Elizabeth"
     assert thinking == "After careful consideration"
@@ -434,7 +437,10 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
     card, thinking, log_path = await model_move(
-        game, "test-model", played_cards, messages, "judge"
+        model="test-model",
+        valid_cards=played_cards,
+        messages=messages,
+        role="judge",
     )
     assert card == "Queen Elizabeth"
     assert thinking == "She's very graceful!"
@@ -454,7 +460,10 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
     card, thinking, log_path = await model_move(
-        game, "test-model", played_cards, messages, "judge"
+        model="test-model",
+        valid_cards=played_cards,
+        messages=messages,
+        role="judge",
     )
     assert card == "Queen Elizabeth"
     assert thinking == "Most graceful choice"
@@ -474,7 +483,10 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
     card, thinking, log_path = await model_move(
-        game, "test-model", played_cards, messages, "judge"
+        model="test-model",
+        valid_cards=played_cards,
+        messages=messages,
+        role="judge",
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed:" in thinking
@@ -496,7 +508,10 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
     card, thinking, log_path = await model_move(
-        game, "test-model", played_cards, messages, "judge"
+        model="test-model",
+        valid_cards=played_cards,
+        messages=messages,
+        role="judge",
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed:" in thinking
@@ -518,7 +533,10 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     mock_call_model.reset_mock()
     mock_call_model.return_value = mock_response
     card, thinking, log_path = await model_move(
-        game, "test-model", played_cards, messages, "judge"
+        model="test-model",
+        valid_cards=played_cards,
+        messages=messages,
+        role="judge",
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed:" in thinking
