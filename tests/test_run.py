@@ -363,7 +363,6 @@ async def test_model_log_preservation(mock_call_model):
 async def test_model_move_retries(mock_call_model):
     """Test that model_move retries on failures and provides proper guidance"""
     # Create test data
-    valid_cards = ["Card1", "Card2"]
     messages = Messages()
     messages.add_user("Initial prompt")
 
@@ -406,6 +405,7 @@ async def test_model_move_retries(mock_call_model):
     mock_call_model.reset_mock()
     messages = Messages()
     messages.add_user("Initial prompt")
+    test2_cards = ["Card2", "Card4"]  # Different set of valid cards
     responses = [
         ModelResponse(
             content='{"reasoning": "Bad choice", "card": "InvalidCard"}',
@@ -437,7 +437,7 @@ async def test_model_move_retries(mock_call_model):
     ]
     mock_call_model.side_effect = responses.copy()  # Use copy to preserve list
     card, thinking, log_path = await model_move(
-        "test-model", valid_cards, messages, "player"
+        "test-model", test2_cards, messages, "player"
     )
     assert card == "Card2"  # Should get Card2 from the final successful response
     assert thinking == "Finally good"
@@ -482,10 +482,11 @@ async def test_model_move_retries(mock_call_model):
         ),
     ]
     mock_call_model.side_effect = responses
+    test3_cards = ["Card5", "Card6"]  # Different set of valid cards
     card, thinking, log_path = await model_move(
-        "test-model", valid_cards, messages, "player"
+        "test-model", test3_cards, messages, "player"
     )
-    assert card in valid_cards  # Should be random choice from valid cards
+    assert card in test3_cards  # Should be random choice from valid cards
     assert "Random selection" in thinking
     assert "after 3 attempts" in thinking
     assert "Invalid3" in thinking  # Should include last raw response
