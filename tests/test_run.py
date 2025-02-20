@@ -368,6 +368,7 @@ async def test_model_move_retries(mock_call_model):
     messages.add_user("Initial prompt")
 
     # Test case 1: Success after first retry (JSON parsing error)
+    test1_cards = ["Card2", "Card3"]  # Different set of valid cards
     responses = [
         ModelResponse(
             content="Invalid JSON",
@@ -390,7 +391,7 @@ async def test_model_move_retries(mock_call_model):
     ]
     mock_call_model.side_effect = responses.copy()  # Use copy to preserve list
     card, thinking, log_path = await model_move(
-        "test-model", valid_cards, messages, "player"
+        "test-model", test1_cards, messages, "player"
     )
     assert card == "Card2"  # Updated to match the expected card
     assert thinking == "Good choice"

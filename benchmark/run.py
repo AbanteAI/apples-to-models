@@ -179,31 +179,23 @@ async def model_move(
             last_error = str(e)
             if attempt < max_attempts - 1:
                 continue
+            break
 
-            # If we've exhausted all attempts, fall back to random
-            error_msg = f"Model failed to provide valid response after {max_attempts} attempts: {last_error}"
-            if last_model_response:
-                error_msg += f"\nLast raw response: {last_model_response.content}"
-            print(f"\nError parsing {role} response: {error_msg}")
-            card = random.choice(valid_cards)
-            return (
-                card,
-                f"Random selection (model failed: {last_error})"
-                + (
-                    f"\nLast raw response: {last_model_response.content}"
-                    if last_model_response
-                    else ""
-                ),
-                last_model_response.log_path if last_model_response else None,
-            )
-
-    # This should never happen as we always return inside the loop,
-    # but we need it to satisfy the type checker
+    # If we get here, all attempts failed, fall back to random
+    error_msg = f"Model failed to provide valid response after {max_attempts} attempts: {last_error}"
+    if last_model_response:
+        error_msg += f"\nLast raw response: {last_model_response.content}"
+    print(f"\nError parsing {role} response: {error_msg}")
     card = random.choice(valid_cards)
     return (
         card,
-        "Random selection (unexpected error: loop completed without return)",
-        None,
+        f"Random selection (model failed: {last_error})"
+        + (
+            f"\nLast raw response: {last_model_response.content}"
+            if last_model_response
+            else ""
+        ),
+        last_model_response.log_path if last_model_response else None,
     )
 
 
