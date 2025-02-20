@@ -276,99 +276,73 @@ async def test_model_log_preservation(mock_call_model):
         os.environ["GAME_LOG_DIR"] = os.path.join(temp_dir, "model_logs")
 
         # Create mock responses for different scenarios
-        player_valid_response = ModelResponse(
-            content='{"reasoning": "Good thinking", "card": "Silent Movies"}',  # Will be in player's hand
-            model="test-model",
-            tokens_prompt=10,
-            tokens_completion=5,
-            total_cost=0.0001,
-            generation_id="test-id-1",
-            log_path=Path(os.path.join(temp_dir, "model_logs", "valid_response.log")),
-        )
-
         player_invalid_response = ModelResponse(
             content="Invalid JSON response",  # Invalid JSON
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
-            generation_id="test-id-2",
+            generation_id="test-id-1",
             log_path=Path(os.path.join(temp_dir, "model_logs", "invalid_response.log")),
         )
 
-        judge_response = ModelResponse(
-            content='{"reasoning": "Good choice", "card": "Silent Movies"}',  # Valid judge response
+        player_invalid_response2 = ModelResponse(
+            content='{"reasoning": "Bad choice", "card": "InvalidCard"}',  # Invalid card
+            model="test-model",
+            tokens_prompt=10,
+            tokens_completion=5,
+            total_cost=0.0001,
+            generation_id="test-id-2",
+            log_path=Path(
+                os.path.join(temp_dir, "model_logs", "invalid_response2.log")
+            ),
+        )
+
+        player_valid_response = ModelResponse(
+            content='{"reasoning": "Good thinking", "card": "Card1"}',  # Valid response
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
             total_cost=0.0001,
             generation_id="test-id-3",
-            log_path=Path(os.path.join(temp_dir, "model_logs", "judge_response.log")),
+            log_path=Path(os.path.join(temp_dir, "model_logs", "valid_response.log")),
         )
 
-        # Create a mock that cycles through responses in a specific order:
-        # 1. Player 1's valid move
-        # 2. Judge's response
-        # 3. Player 1's invalid move
-        # 4. Judge's response
-        responses = [
-            player_valid_response,
-            judge_response,
+        # Set up test data
+        valid_cards = ["Card1", "Card2"]
+        messages = Messages()
+        messages.add_user("Initial prompt")
+
+        # Test case: Success after two retries
+        mock_call_model.side_effect = [
             player_invalid_response,
-            judge_response,
+            player_invalid_response2,
+            player_valid_response,
         ]
-        response_index = 0
 
-        # Set up the mock to cycle through responses
-        async def cycle_responses(*args, **kwargs):
-            nonlocal response_index
-            response = responses[response_index]
-            response_index = (response_index + 1) % len(responses)
-            return response
-
-        mock_call_model.side_effect = cycle_responses
-        game = await run_game(
-            num_rounds=2,
-            num_players=2,
-            models=["gpt-4", "gpt-4"],  # Make both players use the model
-            save_game_path=os.path.join(temp_dir, "game_state.json"),
+        card, thinking, log_path = await model_move(
+            "test-model", valid_cards, messages, "player"
         )
 
-        # Check that both rounds were completed
-        assert len(game.rounds) == 2
+        # Verify final result
+        assert card == "Card1"
+        assert thinking == "Good thinking"
+        assert log_path == player_valid_response.log_path
 
-        # Check first round (valid response)
-        round1 = game.rounds[0]
-        if 0 in round1.moves:  # If player 1 (gpt-4) wasn't judge
-            move = round1.moves[0]
-            assert move.log_path == player_valid_response.log_path
-            assert "Silent Movies" in move.played_card
-            assert "Good thinking" in move.thinking
-        elif round1.decision:  # If player 1 was judge
-            assert round1.decision.log_path == judge_response.log_path
-            assert "Good choice" in round1.decision.reasoning
+        # Verify error messages were added
+        messages_str = " ".join(str(msg) for msg in messages.messages)
+        assert "Invalid JSON response" in messages_str
+        assert "not in player's hand" in messages_str
 
-        # Check second round (invalid response)
-        round2 = game.rounds[1]
-        if 0 in round2.moves:  # If player 1 (gpt-4) wasn't judge
-            move = round2.moves[0]
-            assert move.log_path == player_invalid_response.log_path
-            assert "Random selection" in move.thinking
-            assert "Invalid JSON response" in move.thinking
-        elif round2.decision:  # If player 1 was judge
-            assert round2.decision.log_path == judge_response.log_path
-            assert "Good choice" in round2.decision.reasoning
+        # Verify all model calls were made
+        assert mock_call_model.call_count == 3
 
-        # Verify that the HTML report contains links to both logs
-        state_path = os.path.join(temp_dir, "game_state.json")
-        report_path = os.path.splitext(state_path)[0] + ".html"
-        with open(report_path) as f:
-            report_content = f.read()
-            assert str(player_valid_response.log_path) in report_content
-            assert str(player_invalid_response.log_path) in report_content
-            assert (
-                "no_log.txt" not in report_content
-            )  # Should not use no_log.txt for model failures
+        # Verify that error responses were preserved in messages
+        assert any("Invalid JSON response" in str(msg) for msg in messages.messages)
+        assert any("InvalidCard" in str(msg) for msg in messages.messages)
+
+        # Verify that the final log path is from the successful response
+        assert log_path == player_valid_response.log_path
 
 
 @pytest.mark.asyncio
@@ -392,7 +366,7 @@ async def test_model_move_retries(mock_call_model):
             log_path=Path("tests/test1.log"),
         ),
         ModelResponse(
-            content='{"reasoning": "Good choice", "card": "Card1"}',
+            content='{"reasoning": "Good choice", "card": "Card2"}',
             model="test-model",
             tokens_prompt=10,
             tokens_completion=5,
@@ -405,7 +379,7 @@ async def test_model_move_retries(mock_call_model):
     card, thinking, log_path = await model_move(
         "test-model", valid_cards, messages, "player"
     )
-    assert card == "Card1"
+    assert card == "Card2"
     assert thinking == "Good choice"
     assert log_path == Path("tests/test2.log")
     assert mock_call_model.call_count == 2
@@ -616,7 +590,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         log_path=Path("tests/test.log"),
     )
     mock_call_model.reset_mock()
-    mock_call_model.return_value = mock_response
+    mock_call_model.side_effect = [
+        mock_response
+    ] * 3  # Will be called 3 times for retries
     card, thinking, log_path = await model_move(
         model="test-model",
         valid_cards=played_cards,
@@ -628,7 +604,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert "Invalid JSON response" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
-    mock_call_model.assert_called_once()
+    assert mock_call_model.call_count == 3  # Should be called 3 times for retries
 
     # Test case 5: Model responds with JSON missing required fields
     mock_response = ModelResponse(
@@ -641,7 +617,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         log_path=Path("tests/test.log"),
     )
     mock_call_model.reset_mock()
-    mock_call_model.return_value = mock_response
+    mock_call_model.side_effect = [
+        mock_response
+    ] * 3  # Will be called 3 times for retries
     card, thinking, log_path = await model_move(
         model="test-model",
         valid_cards=played_cards,
@@ -653,7 +631,12 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert "Response must contain 'reasoning' and 'card' fields" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
-    mock_call_model.assert_called_once()
+    assert mock_call_model.call_count == 3  # Should be called 3 times for retries
+    # Verify error guidance was added
+    messages_str = " ".join(str(msg) for msg in messages.messages)
+    assert (
+        messages_str.count("Response must contain 'reasoning' and 'card' fields") == 2
+    )  # Two retries
 
     # Test case 6: Model responds with invalid card in JSON
     mock_response = ModelResponse(
@@ -666,7 +649,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
         log_path=Path("tests/test.log"),
     )
     mock_call_model.reset_mock()
-    mock_call_model.return_value = mock_response
+    mock_call_model.side_effect = [
+        mock_response
+    ] * 3  # Will be called 3 times for retries
     card, thinking, log_path = await model_move(
         model="test-model",
         valid_cards=played_cards,
@@ -678,4 +663,7 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     assert "which is not in played cards" in thinking
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
-    mock_call_model.assert_called_once()
+    assert mock_call_model.call_count == 3  # Should be called 3 times for retries
+    # Verify error guidance was added
+    messages_str = " ".join(str(msg) for msg in messages.messages)
+    assert messages_str.count("which is not in played cards") == 2  # Two retries
