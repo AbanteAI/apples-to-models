@@ -133,10 +133,8 @@ def test_create_judge_messages_basic():
 
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
-    assert_content_contains(prompt_message, "As the judging AI model this round")
-    assert_content_contains(
-        prompt_message, "Your decision criteria can include ANY of these aspects"
-    )
+    assert_content_contains(prompt_message, "Choose which red card wins this round")
+    assert_content_contains(prompt_message, "Your reasoning will be private")
 
 
 def test_create_judge_messages_with_history():
@@ -201,10 +199,8 @@ def test_create_judge_messages_with_history():
 
     # Check judge prompt
     prompt_message = get_message_content(messages.messages[-1])
-    assert_content_contains(prompt_message, "As the judging AI model this round")
-    assert_content_contains(
-        prompt_message, "Your decision criteria can include ANY of these aspects"
-    )
+    assert_content_contains(prompt_message, "Choose which red card wins this round")
+    assert_content_contains(prompt_message, "Your reasoning will be private")
 
 
 def test_player_perspective_in_history():
