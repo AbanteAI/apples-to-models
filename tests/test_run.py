@@ -263,7 +263,10 @@ def test_parse_model_response():
         parse_model_response("not json")
 
     # Test missing required fields
-    with pytest.raises(ValueError, match="must contain 'reasoning' and 'card' fields"):
+    with pytest.raises(
+        ValueError,
+        match="Your JSON response must contain both 'reasoning' and 'card' fields",
+    ):
         parse_model_response('{"thinking": "Good thinking"}')
 
     # Test non-object response
@@ -353,7 +356,9 @@ async def test_model_log_preservation(mock_call_model):
         assert mock_call_model.call_count == 3
 
         # Verify that error responses were preserved in messages
-        assert any("Invalid JSON response" in msg for msg in error_messages)
+        assert any(
+            "Your entire response must be valid JSON" in msg for msg in error_messages
+        )
         assert any("InvalidCard" in msg for msg in error_messages)
 
         # Verify that the final log path is from the successful response
@@ -651,7 +656,9 @@ async def test_judge_move_with_exact_cards(mock_call_model):
     )
     assert card in ["Queen Elizabeth", "Dreams"]  # Should fall back to random
     assert "Random selection (model failed after 3 attempts:" in thinking
-    assert "Response must contain 'reasoning' and 'card' fields" in thinking
+    assert (
+        "Your JSON response must contain both 'reasoning' and 'card' fields" in thinking
+    )
     assert mock_response.content in thinking  # Raw response should be included
     assert log_path == Path("tests/test.log")  # Log path should be preserved
     assert mock_call_model.call_count == 3  # Should be called 3 times for retries
