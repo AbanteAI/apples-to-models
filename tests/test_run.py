@@ -378,9 +378,13 @@ async def test_model_log_preservation(mock_call_model):
         assert log_path == player_valid_response.log_path
 
         # Verify that all model calls were tracked in benchmark stats
-        assert game.benchmark_stats.total_cost == 0.0003  # 3 calls * 0.0001
+        assert game.benchmark_stats.total_cost == pytest.approx(
+            0.0003
+        )  # 3 calls * 0.0001
         assert game.benchmark_stats.model_stats["test-model"]["calls"] == 3
-        assert game.benchmark_stats.model_stats["test-model"]["cost"] == 0.0003
+        assert game.benchmark_stats.model_stats["test-model"]["cost"] == pytest.approx(
+            0.0003
+        )
 
 
 @pytest.mark.asyncio
