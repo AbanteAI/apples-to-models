@@ -155,8 +155,18 @@ async def model_move(
 
     for attempt in range(max_attempts):
         try:
-            # If this isn't the first attempt, add error guidance
+            # If this isn't the first attempt, show attempt number and previous error
             if attempt > 0:
+                cprint(f"\n{model} - Attempt {attempt + 1}/{max_attempts}", "yellow")
+                cprint(f"Previous error: {last_error}", "red")
+                if last_model_response:
+                    cprint(f"Previous response: {last_model_response.content}", "red")
+
+                # Add the failed response as an assistant message
+                if last_model_response:
+                    messages.add_assistant(last_model_response.content)
+
+                # Add error guidance
                 error_guidance = (
                     f"Your previous response was invalid: {last_error}\n\n"
                     f"Please provide a valid JSON response in the format:\n"
@@ -194,7 +204,14 @@ async def model_move(
     error_msg = f"Model failed to provide valid response after {max_attempts} attempts: {last_error}"
     if last_model_response:
         error_msg += f"\nLast raw response: {last_model_response.content}"
-    print(f"\nError parsing {role} response: {error_msg}")
+
+    # Print error with high visibility
+    cprint("\n" + "!" * 80, "red", attrs=["bold"])
+    cprint(f"{model} FAILED - Falling back to random selection", "red", attrs=["bold"])
+    cprint(f"Role: {role}", "red")
+    cprint(f"Error: {error_msg}", "red")
+    cprint("!" * 80 + "\n", "red", attrs=["bold"])
+
     card = random.choice(valid_cards)
     return (
         card,
