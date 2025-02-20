@@ -111,14 +111,23 @@ def parse_model_response(content: str) -> tuple[str, str]:
     try:
         response_data = json.loads(content, strict=False)
         if not isinstance(response_data, dict):
-            raise ValueError("Response must be a JSON object")
+            raise ValueError(
+                "Your entire response must be a JSON object. "
+                "For example: {'reasoning': 'your reasoning here', 'card': 'your card choice'}"
+            )
         if "reasoning" not in response_data or "card" not in response_data:
-            raise ValueError("Response must contain 'reasoning' and 'card' fields")
+            raise ValueError(
+                "Your JSON response must contain both 'reasoning' and 'card' fields. "
+                "For example: {'reasoning': 'your reasoning here', 'card': 'your card choice'}"
+            )
         thinking = response_data["reasoning"].strip()
         card = response_data["card"].strip()
         return thinking, card
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON response: {e}")
+        raise ValueError(
+            f"Your entire response must be valid JSON that can be parsed. Error: {e}. "
+            "For example: {'reasoning': 'your reasoning here', 'card': 'your card choice'}"
+        )
 
 
 async def model_move(
