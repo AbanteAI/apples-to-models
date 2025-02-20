@@ -13,7 +13,7 @@ from termcolor import cprint  # type: ignore
 
 from benchmark.game import Game, JudgeDecision
 from benchmark.game_report import save_html_report
-from benchmark.model_utils import Messages, call_model
+from benchmark.model_utils import Messages, ModelResponse, call_model
 from benchmark.prompts import create_judge_messages, create_player_messages
 
 # Create games directory if it doesn't exist
@@ -136,7 +136,7 @@ async def model_move(
     messages: Messages,
     role: str,
     max_attempts: int = 3,
-) -> Tuple[str, str, Optional[Path]]:
+) -> Tuple[str, str, Optional[Path], Optional[ModelResponse]]:
     """Make a model-based move for either a player or judge.
 
     Args:
@@ -147,7 +147,7 @@ async def model_move(
         max_attempts: Maximum number of attempts to get a valid response (default 3)
 
     Returns:
-        Tuple of (chosen_card, thinking, log_path)
+        Tuple of (chosen_card, thinking, log_path, model_response)
     """
     valid_type = "player's hand" if role == "player" else "played cards"
     last_model_response = None
@@ -182,7 +182,7 @@ async def model_move(
                     f"Model chose card '{card}' which is not in {valid_type}: {valid_cards}"
                 )
 
-            return card, thinking, model_response.log_path
+            return card, thinking, model_response.log_path, model_response
 
         except Exception as e:
             last_error = str(e)
@@ -205,6 +205,7 @@ async def model_move(
             else ""
         ),
         last_model_response.log_path if last_model_response else None,
+        last_model_response,
     )
 
 
@@ -260,6 +261,7 @@ async def run_game(
 
                 player = game.players[player_idx]
 
+                model_response = None
                 if model == "random":
                     card = random.choice(player.hand)
                     thinking = "Random selection"
@@ -268,7 +270,7 @@ async def run_game(
                     messages = create_player_messages(
                         game, player_idx, round.green_card, player.hand
                     )
-                    card, thinking, log_path = await model_move(
+                    card, thinking, log_path, model_response = await model_move(
                         model=model,
                         valid_cards=player.hand,
                         messages=messages,
@@ -281,7 +283,7 @@ async def run_game(
                 cprint(f"Plays: {card}", "red")
                 cprint(f"Thinking: {thinking}", "red")
 
-                return player_idx, card, thinking, log_path
+                return player_idx, card, thinking, log_path, model_response
 
             # Create tasks for all players
             tasks = [
@@ -295,10 +297,9 @@ async def run_game(
             # Process completed moves
             for result in results:
                 if result:  # Skip None results (judge's turn)
-                    player_idx, card, thinking, log_path = result
-                    game.play_card(player_idx, card, thinking)
-                    if log_path and player_idx in game.rounds[-1].moves:
-                        game.rounds[-1].moves[player_idx].log_path = log_path
+                    player_idx, card, thinking, log_path, model_response = result
+                    # Pass model response to update benchmark stats
+                    game.play_card(player_idx, card, thinking, model_response)
 
             # Judge selects a winner
             judge_model = models[round.judge]
@@ -308,25 +309,30 @@ async def run_game(
                 winning_card = random.choice(played_cards)
                 thinking = "Random selection"
                 log_path = Path("benchmark/logs/no_log.txt")
+                model_response = None
             else:
                 messages = create_judge_messages(game, round.judge)
                 played_cards = [move.played_card for move in round.moves.values()]
-                winning_card, thinking, log_path = await model_move(
+                winning_card, thinking, log_path, model_response = await model_move(
                     model=judge_model,
                     valid_cards=played_cards,
                     messages=messages,
                     role="judge",
                 )
+                # Ensure log_path is a Path object
                 log_path = log_path if log_path else Path("benchmark/logs/no_log.txt")
 
             # Record the decision
-            game.judge_round(winning_card, thinking)
+            game.judge_round(winning_card, thinking, model_response)
             if game.rounds[-1].decision:
                 game.rounds[-1].decision = JudgeDecision(
                     winning_card=winning_card,
                     winning_player=game.rounds[-1].decision.winning_player,
                     reasoning=thinking,
-                    log_path=log_path,
+                    log_path=log_path
+                    if log_path
+                    else Path("benchmark/logs/no_log.txt"),
+                    raw_response=model_response.content if model_response else None,
                 )
 
             # Print the results
